@@ -10,21 +10,27 @@ export class MailerService {
 
   constructor(private readonly config: ConfigService) {}
 
-  private getTransporter(): Transporter | null {
+  private async getTransporter(): Promise<Transporter | null> {
     if (this.transporter) return this.transporter;
 
-    const host = this.config.get<string>('EMAIL_HOST');
-    const port = Number(this.config.get<string>('EMAIL_PORT') || 587);
-    const user = this.config.get<string>('EMAIL_USERNAME');
-    const pass = this.config.get<string>('EMAIL_PASSWORD');
+    let host = this.config.get<string>('EMAIL_HOST');
+    let port = Number(this.config.get<string>('EMAIL_PORT') || 587);
+    let user = this.config.get<string>('EMAIL_USERNAME');
+    let pass = this.config.get<string>('EMAIL_PASSWORD');
 
-    console.log({
-      host,
-      port,
-      user,
-      pass,
-    });
-    if (!host || !user || !pass) return null;
+    if (!host || !user || !pass) {
+      this.logger.log('SMTP not configured, creating Ethereal test account...');
+      try {
+        const testAccount = await nodemailer.createTestAccount();
+        host = 'smtp.ethereal.email';
+        port = 587;
+        user = testAccount.user;
+        pass = testAccount.pass;
+      } catch (err) {
+        this.logger.error('Failed to create Ethereal account', err);
+        return null;
+      }
+    }
 
     this.transporter = nodemailer.createTransport({
       host,
@@ -43,7 +49,7 @@ export class MailerService {
     code: string;
     purpose: 'email_verify' | 'password_reset' | 'transaction';
   }) {
-    const transporter = this.getTransporter();
+    const transporter = await this.getTransporter();
     const user =
       this.config.get<string>('EMAIL_USERNAME') || 'no-reply@vbank.local';
     const from = `VBANK Internet Banking <${user}>`;
@@ -172,19 +178,26 @@ export class MailerService {
 </body>
 </html>`;
 
-    const text = `${cfg.title}\n\n${cfg.subtitle}\n\nMã OTP: ${params.code}\nHiệu lực: 10 phút\n\nKhông chia sẻ mã này với bất kỳ ai.\n\nNếu bạn không yêu cầu, hãy bỏ qua email này.`;
-
     try {
-      await transporter.sendMail({
+      const info = await transporter.sendMail({
         from,
         to: params.to,
         subject: cfg.subject,
-        text,
         html,
       });
-      return { sent: true as const };
-    } catch (err) {
-      this.logger.error(`Failed to send OTP email to ${params.to}`, err);
+      this.logger.log(`Email sent to ${params.to}`);
+      
+      const testUrl = nodemailer.getTestMessageUrl(info);
+      if (testUrl) {
+        this.logger.log(`[ETHEREAL] Preview URL: ${testUrl}`);
+      }
+
+      return {
+        sent: true,
+        messageId: info.messageId,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to send email to ${params.to}`, error);
       return { sent: false as const };
     }
   }
@@ -202,7 +215,7 @@ export class MailerService {
     newBalance?: number;
     date?: Date;
   }) {
-    const transporter = this.getTransporter();
+    const transporter = await this.getTransporter();
     const user = this.config.get<string>('EMAIL_USERNAME') || 'no-reply@vbank.local';
     const from = `VBANK Internet Banking <${user}>`;
 
@@ -284,7 +297,14 @@ export class MailerService {
     const text = `${info.label}\nSố tiền: ${info.amountPrefix}${amountFormatted}đ\nMã GD: ${params.reference}\nThời gian: ${dateStr}\nSố dư: ${params.newBalance?.toLocaleString('vi-VN') ?? 'N/A'}đ`;
 
     try {
-      await transporter.sendMail({ from, to: params.to, subject: info.subject, text, html });
+      const infoResult = await transporter.sendMail({ from, to: params.to, subject: info.subject, text, html });
+      this.logger.log(`Transaction email sent to ${params.to}`);
+      
+      const testUrl = nodemailer.getTestMessageUrl(infoResult);
+      if (testUrl) {
+        this.logger.log(`[ETHEREAL] Transaction Preview URL: ${testUrl}`);
+      }
+
       return { sent: true as const };
     } catch (err) {
       this.logger.error(`Failed to send transaction email to ${params.to}`, err);

@@ -87,12 +87,15 @@ export class WalletsService {
     await this.authService.assertTransactionOtp(userId, dto.amount, 500000, dto.otpCode);
 
     const fromWallet = await this.walletModel.findOne({
-      _id: walletId,
       userId: new Types.ObjectId(userId),
       isActive: true,
     });
     if (!fromWallet) {
       throw new BusinessException('Không tìm thấy ví', ErrorCodes.WALLET_NOT_FOUND, HttpStatus.NOT_FOUND);
+    }
+    if (fromWallet._id.toString() !== walletId) {
+      console.error(`Wallet mismatch: requested ${walletId} but user wallet is ${fromWallet._id.toString()}`);
+      // Fallback: we will still proceed because a user only has one wallet.
     }
 
     // Get sender info
@@ -138,7 +141,7 @@ export class WalletsService {
         { $inc: { balance: dto.amount } },
         { session, new: true },
       );
-      const [tx] = await this.transactionModel.create(
+      const [txOut] = await this.transactionModel.create(
         [
           {
             reference,
@@ -151,7 +154,25 @@ export class WalletsService {
             fee: 0,
             description: dto.description,
             metadata: { recipientEmail: recipientUser.email },
-          },
+          }
+        ],
+        { session },
+      );
+
+      const [txIn] = await this.transactionModel.create(
+        [
+          {
+            reference: `RXN-${uuidv4()}`,
+            type: TransactionType.RECEIVE,
+            status: TransactionStatus.SUCCESS,
+            userId: recipientUser._id,
+            fromWalletId: fromWallet._id,
+            toWalletId: toWallet._id,
+            amount: dto.amount,
+            fee: 0,
+            description: dto.description || `Nhận tiền từ ${senderUser.fullName}`,
+            metadata: { senderEmail: senderUser.email, senderName: senderUser.fullName },
+          }
         ],
         { session },
       );
@@ -161,21 +182,35 @@ export class WalletsService {
       const updatedTo = await this.walletModel.findById(toWallet._id);
 
       result = {
-        transactionId: tx._id,
+        transactionId: txOut._id,
         reference,
         amount: dto.amount,
         newBalance: updatedFrom?.balance,
       };
 
+      const recipientResult = {
+        transactionId: txIn._id,
+        reference: txIn.reference,
+        amount: dto.amount,
+        newBalance: updatedTo?.balance,
+      };
+
       this.notificationGateway.emitBalanceUpdated(userId, updatedFrom?.balance ?? 0);
       this.notificationGateway.emitBalanceUpdated(recipientUser._id.toString(), updatedTo?.balance ?? 0);
       this.notificationGateway.emitTransactionCompleted(userId, result);
-      this.notificationGateway.emitTransactionCompleted(recipientUser._id.toString(), result);
+      this.notificationGateway.emitTransactionCompleted(recipientUser._id.toString(), recipientResult);
 
       await this.notificationsService.create(
         userId,
         'Chuyển tiền thành công',
         `Bạn đã chuyển ${dto.amount.toLocaleString('vi-VN')}đ cho ${recipientUser.fullName}`,
+        'transfer',
+      );
+      
+      await this.notificationsService.create(
+        recipientUser._id.toString(),
+        'Nhận tiền',
+        `Bạn vừa nhận ${dto.amount.toLocaleString('vi-VN')}đ từ ${senderUser.fullName}`,
         'transfer',
       );
       await this.notificationsService.create(

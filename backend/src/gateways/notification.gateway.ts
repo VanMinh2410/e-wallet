@@ -1,8 +1,16 @@
 import { WebSocketGateway, WebSocketServer, OnGatewayConnection } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:5175',
+  'http://localhost:5176',
+].filter(Boolean) as string[];
+
 @WebSocketGateway({
-  cors: { origin: process.env.FRONTEND_URL || 'http://localhost:5173', credentials: true },
+  cors: { origin: allowedOrigins, credentials: true },
   namespace: '/notifications',
 })
 export class NotificationGateway implements OnGatewayConnection {

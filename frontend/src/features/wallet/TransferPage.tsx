@@ -196,7 +196,68 @@ export function TransferPage() {
             </div>
           </div>
           <div className={styles.sidebarColumn}>
-            <AmountSection amount={amount} setAmount={setAmount} balance={wallet?.balance} min={1000} />
+            <div style={{ marginBottom: '8px' }}>
+              <label className={styles.amountLabel}>Tài khoản nguồn</label>
+              <div className={styles.walletSourceCard} style={{ marginBottom: 0, marginTop: '12px' }}>
+                <div className={styles.walletSourceIcon}>👛</div>
+                <div className={styles.walletSourceInfo}>
+                  <div className={styles.walletSourceName}>Từ: Ví HKi</div>
+                  <div className={styles.walletSourceBalance}>
+                    Số dư khả dụng: <strong>{formatCurrency(wallet?.balance ?? 0)}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.savedBanksSection}>
+              <label className={styles.amountLabel}>Danh bạ Ví HKi</label>
+              <div className={styles.savedBanksList}>
+                {/* Placeholder for HKi Wallet contacts */}
+                {userEmail !== 'usera@hki-wallet.dev' && (
+                  <button
+                    type="button"
+                    className={styles.bankAccountCard}
+                    onClick={() => setRecipient('usera@hki-wallet.dev')}
+                  >
+                    <div className={styles.bankAccountIcon} style={{ background: '#0C447C' }}>👤</div>
+                    <div className={styles.bankAccountInfo}>
+                      <div className={styles.bankAccountName}>User A</div>
+                      <div className={styles.bankAccountNum}>usera@hki-wallet.dev</div>
+                    </div>
+                  </button>
+                )}
+                
+                {userEmail !== 'userb@hki-wallet.dev' && (
+                  <button
+                    type="button"
+                    className={styles.bankAccountCard}
+                    onClick={() => setRecipient('0923456789')}
+                  >
+                    <div className={styles.bankAccountIcon} style={{ background: '#1A5999' }}>👤</div>
+                    <div className={styles.bankAccountInfo}>
+                      <div className={styles.bankAccountName}>User B</div>
+                      <div className={styles.bankAccountNum}>0923 345 678</div>
+                    </div>
+                  </button>
+                )}
+                
+                {userEmail !== 'admin@hki-wallet.dev' && (
+                  <button
+                    type="button"
+                    className={styles.bankAccountCard}
+                    onClick={() => setRecipient('0901234567')}
+                  >
+                    <div className={styles.bankAccountIcon} style={{ background: '#10B981' }}>👤</div>
+                    <div className={styles.bankAccountInfo}>
+                      <div className={styles.bankAccountName}>Admin HKi</div>
+                      <div className={styles.bankAccountNum}>0901 234 567</div>
+                    </div>
+                  </button>
+                )}
+              </div>
+            </div>
+            
+            <AmountSection amount={amount} setAmount={setAmount} min={1000} />
           </div>
         </div>
       )}
@@ -256,9 +317,22 @@ export function TransferPage() {
           </div>
 
           <div className={styles.sidebarColumn}>
+            <div style={{ marginBottom: '8px' }}>
+              <label className={styles.amountLabel}>Tài khoản nguồn</label>
+              <div className={styles.walletSourceCard} style={{ marginBottom: 0, marginTop: '12px' }}>
+                <div className={styles.walletSourceIcon}>👛</div>
+                <div className={styles.walletSourceInfo}>
+                  <div className={styles.walletSourceName}>Từ: Ví HKi</div>
+                  <div className={styles.walletSourceBalance}>
+                    Số dư khả dụng: <strong>{formatCurrency(wallet?.balance ?? 0)}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {linkedBanks && linkedBanks.length > 0 && (
               <div className={styles.savedBanksSection}>
-                <label className={styles.amountLabel}>Tài khoản đã lưu</label>
+                <label className={styles.amountLabel}>Tài khoản liên kết của bạn (Ngân hàng)</label>
                 <div className={styles.savedBanksList}>
                   {linkedBanks.map((b) => (
                     <button
@@ -279,7 +353,7 @@ export function TransferPage() {
               </div>
             )}
 
-            <AmountSection amount={amount} setAmount={setAmount} balance={wallet?.balance} min={10000} />
+            <AmountSection amount={amount} setAmount={setAmount} min={10000} />
 
             {!linkedBanks?.length && (
               <p className={styles.hint}>
@@ -373,12 +447,10 @@ export function TransferPage() {
 function AmountSection({
   amount,
   setAmount,
-  balance,
   min = 1000,
 }: {
   amount: string;
   setAmount: (v: string) => void;
-  balance?: number;
   min?: number;
 }) {
   return (
@@ -404,7 +476,6 @@ function AmountSection({
           ))}
         </div>
       </div>
-      <p className={styles.hint}>💰 Số dư khả dụng: <strong>{formatCurrency(balance ?? 0)}</strong></p>
     </>
   );
 }

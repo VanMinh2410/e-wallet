@@ -74,9 +74,9 @@ export class AuthService {
     try {
       const [user] = await this.userModel.create(
         [{ fullName: dto.fullName, email, phone: dto.phone, passwordHash, isVerified: false }],
-        { session },
+        { session, ordered: true },
       );
-      await this.walletModel.create([{ userId: user._id, balance: 0 }], { session });
+      await this.walletModel.create([{ userId: user._id, balance: 0 }], { session, ordered: true });
       
       // Auto link a default card for the newly registered user
       await this.bankModel.create(
@@ -91,7 +91,7 @@ export class AuthService {
             isActive: true,
           },
         ],
-        { session },
+        { session, ordered: true },
       );
 
       await session.commitTransaction();

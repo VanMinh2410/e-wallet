@@ -10,7 +10,9 @@ import { BankAccount, BankAccountDocument } from './schemas/bank-account.schema'
 export class BankService {
   private readonly key = scryptSync(process.env.COOKIE_SECRET || 'dev-key', 'salt', 32);
 
-  constructor(@InjectModel(BankAccount.name) private bankModel: Model<BankAccountDocument>) {}
+  constructor(@InjectModel(BankAccount.name) private bankModel: Model<BankAccountDocument>) {
+    console.log('BankService instantiated. COOKIE_SECRET =', process.env.COOKIE_SECRET);
+  }
 
   private encrypt(text: string): string {
     const iv = randomBytes(16);

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import api, { unwrap } from '../../shared/services/api';
@@ -18,8 +18,12 @@ export function VnpayCallbackPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const isStarted = useRef(false);
 
   useEffect(() => {
+    if (isStarted.current) return;
+    isStarted.current = true;
+
     const verifyPayment = async () => {
       // Gather all search params into an object
       const params: Record<string, string> = {};

@@ -734,6 +734,57 @@
   font-feature-settings: 'tnum';
 }
 
+/* =================== WALLET SOURCE CARD =================== */
+.walletSourceCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border: 2px solid #E2E8F0;
+  border-radius: var(--radius-lg);
+  background: #FFFFFF;
+  text-align: left;
+  width: 100%;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.01);
+}
+
+.walletSourceIcon {
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+  color: #FFFFFF;
+  box-shadow: 0 4px 10px rgba(217, 119, 6, 0.15);
+}
+
+.walletSourceInfo {
+  flex: 1;
+}
+
+.walletSourceName {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #0F172A;
+}
+
+.walletSourceBalance {
+  font-size: 13px;
+  color: #64748B;
+  margin-top: 3px;
+  font-weight: 500;
+}
+
+.walletSourceBalance strong {
+  color: #0F172A;
+  font-weight: 700;
+}
+
 /* =================== BANK ACCOUNT CARD =================== */
 .bankAccountCard {
   display: flex;

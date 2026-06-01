@@ -13,6 +13,7 @@ export interface TransactionItem {
 
 const TYPE_ICONS: Record<string, string> = {
   TRANSFER: '↔',
+  RECEIVE: '↓',
   DEPOSIT: '↓',
   WITHDRAW: '↑',
   PAYMENT: '▣',
@@ -21,6 +22,7 @@ const TYPE_ICONS: Record<string, string> = {
 function typeClass(type: string) {
   const t = type.toLowerCase();
   if (t === 'transfer') return styles.transfer;
+  if (t === 'receive') return styles.deposit;
   if (t === 'deposit') return styles.deposit;
   if (t === 'withdraw') return styles.withdraw;
   if (t === 'payment') return styles.payment;

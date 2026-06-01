@@ -14,6 +14,7 @@ export function formatDate(iso: string): string {
 
 export const TX_TYPE_LABELS: Record<string, string> = {
   TRANSFER: 'Chuyển tiền',
+  RECEIVE: 'Nhận tiền',
   DEPOSIT: 'Nạp tiền',
   WITHDRAW: 'Rút tiền',
   PAYMENT: 'Thanh toán QR',

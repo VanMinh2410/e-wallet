@@ -61,7 +61,7 @@ const BankAccountSchema = new mongoose.Schema(
 
 const User = mongoose.model('User', UserSchema);
 const Wallet = mongoose.model('Wallet', WalletSchema);
-const BankAccount = mongoose.model('BankAccount', BankAccountSchema);
+const BankAccount = mongoose.model('BankAccount', BankAccountSchema, 'bank_accounts');
 
 const crypto = require('crypto');
 

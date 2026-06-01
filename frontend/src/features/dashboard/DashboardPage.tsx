@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useAppSelector } from '../../app/hooks';
 import { Navigate, Link, useNavigate } from 'react-router-dom';
@@ -15,10 +15,21 @@ interface LinkedBankAccount {
   isVerified: boolean;
 }
 
+interface ApiTransactionItem {
+  _id?: string;
+  reference: string;
+  type: string;
+  amount: number;
+  status: string;
+  createdAt: string;
+  description?: string;
+}
+
 export function DashboardPage() {
   const user = useAppSelector((s) => s.auth.user);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const qc = useQueryClient();
 
   if (user?.role === 'admin') {
     return <Navigate to="/admin" replace />;
@@ -36,104 +47,276 @@ export function DashboardPage() {
     queryFn: async () => unwrap<LinkedBankAccount[]>(await api.get('/bank-accounts')),
   });
 
+  const { data: transactionsData } = useQuery({
+    queryKey: ['transactions-all'],
+    queryFn: async () => {
+      const res = await api.get('/transactions', {
+        params: { page: 1, limit: 50 },
+      });
+      return unwrap<{
+        items: ApiTransactionItem[];
+        total: number;
+      }>(res);
+    },
+  });
+
   useSocket(user?.id, {
     onBalanceUpdated: (b) => {
       setBalance(b);
-      toast('Số dư đã cập nhật', 'success');
+      // Optional: don't toast balance update in dashboard to avoid spam
+    },
+    onTransactionCompleted: () => {
+      qc.invalidateQueries({ queryKey: ['transactions-all'] });
     },
     onNotification: (n) => {
       const note = n as { title?: string; message?: string };
       toast(note.message ?? note.title ?? 'Có thông báo mới', 'info');
+      qc.invalidateQueries({ queryKey: ['transactions-all'] });
+      qc.invalidateQueries({ queryKey: ['wallet'] });
     },
   });
 
-  const displayBalance = balance ?? wallet?.balance ?? 24580000;
+  const displayBalance = balance ?? wallet?.balance ?? 0;
 
-  // Recent transactions strictly matching image mockups
-  const RECENT_TRANSACTIONS = [
-    {
-      id: 'tx1',
-      title: 'Shopee Food',
-      subtitle: '*4821',
-      time: '26/05 08:30',
-      amount: -85000,
-      type: 'PAYMENT',
-      badge: 'Chi',
-      badgeColor: '#EF4444',
-      icon: '🛒',
-      bgColor: '#FFEBEA',
-      color: '#E53E3E',
-    },
-    {
-      id: 'tx2',
-      title: 'Nguyễn Thị Lan',
-      subtitle: 'Chuyển khoản',
-      time: '25/05 16:45',
-      amount: 500000,
-      type: 'TRANSFER',
-      badge: 'Thu',
-      badgeColor: '#10B981',
-      icon: '↓',
-      bgColor: '#E6FFFA',
-      color: '#319795',
-    },
-    {
-      id: 'tx3',
-      title: 'EVN Hà Nội',
-      subtitle: 'Tiền điện T5',
-      time: '24/05 10:00',
-      amount: -312000,
-      type: 'PAYMENT',
-      badge: 'Chi',
-      badgeColor: '#EF4444',
-      icon: '⚡',
-      bgColor: '#EBF8FF',
-      color: '#3182CE',
-    },
-    {
-      id: 'tx4',
-      title: 'Nạp Viettel',
-      subtitle: 'SĐT 090xxx',
-      time: '23/05 14:20',
-      amount: -100000,
-      type: 'PAYMENT',
-      badge: 'Chi',
-      badgeColor: '#EF4444',
-      icon: '📱',
-      bgColor: '#FFFDF5',
-      color: '#D69E2E',
-    },
-    {
-      id: 'tx5',
-      title: 'Đặt cọc thuê nhà',
-      subtitle: 'CK tới VCB',
-      time: '22/05 09:00',
-      amount: -5000000,
-      type: 'TRANSFER',
-      badge: 'Chờ',
-      badgeColor: '#F59E0B',
-      icon: '🏦',
-      bgColor: '#F3E8FF',
-      color: '#8B5CF6',
-    },
-  ];
+  const formatTxDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
 
-  const CHART_DATA = [
-    { month: 'Th.12', thu: 75, chi: 60 },
-    { month: 'Th.1', thu: 85, chi: 70 },
-    { month: 'Th.2', thu: 60, chi: 55 },
-    { month: 'Th.3', thu: 90, chi: 80 },
-    { month: 'Th.4', thu: 95, chi: 85 },
-    { month: 'Th.5', thu: 110, chi: 90 }, // active month
-  ];
+  // Map real transaction to visual representation
+  const mapRealTransaction = (tx: ApiTransactionItem) => {
+    const isOut =
+      tx.type === 'TRANSFER' ||
+      tx.type === 'BANK_TRANSFER' ||
+      tx.type === 'WITHDRAW' ||
+      tx.type === 'PAYMENT';
+    const amount = isOut ? -Math.abs(tx.amount) : Math.abs(tx.amount);
 
-  const CATEGORY_EXPENSES = [
-    { label: 'Ăn uống', amount: 1850000, percent: 70, barColor: '#F97316' },
-    { label: 'Hóa đơn', amount: 1200000, percent: 50, barColor: '#3B82F6' },
-    { label: 'Mua sắm', amount: 980000, percent: 40, barColor: '#EC4899' },
-    { label: 'Giải trí', amount: 420000, percent: 20, barColor: '#A855F7' },
-    { label: 'Khác', amount: 1400000, percent: 58, barColor: '#64748B' },
-  ];
+    let title = tx.description || 'Giao dịch';
+    let icon = '💳';
+    let iconBg = '#F3F4F6';
+    let iconColor = '#4B5563';
+
+    if (tx.type === 'DEPOSIT') {
+      title = tx.description || 'Nạp tiền tài khoản';
+      icon = '＋';
+      iconBg = '#F0FFF4';
+      iconColor = '#38A169';
+    } else if (tx.type === 'WITHDRAW') {
+      title = tx.description || 'Rút tiền tài khoản';
+      icon = '🏦';
+      iconBg = '#EDF2F7';
+      iconColor = '#4A5568';
+    } else if (tx.type === 'TRANSFER' || tx.type === 'BANK_TRANSFER' || tx.type === 'RECEIVE') {
+      title = tx.description || (isOut ? 'Chuyển tiền' : 'Nhận tiền');
+      icon = isOut ? '↗' : '↓';
+      iconBg = isOut ? '#EBF8FF' : '#E6FFFA';
+      iconColor = isOut ? '#2B6CB0' : '#319795';
+    } else if (tx.type === 'PAYMENT') {
+      title = tx.description || 'Thanh toán hóa đơn';
+      icon = '⚡';
+      iconBg = '#FFFDF5';
+      iconColor = '#D69E2E';
+    }
+
+    const lowerTitle = title.toLowerCase();
+    if (lowerTitle.includes('shopee')) {
+      icon = '🛒';
+      iconBg = '#FFEBEA';
+      iconColor = '#E53E3E';
+    } else if (lowerTitle.includes('lan')) {
+      icon = '↓';
+      iconBg = '#E6FFFA';
+      iconColor = '#319795';
+    } else if (lowerTitle.includes('điện') || lowerTitle.includes('evn')) {
+      icon = '⚡';
+      iconBg = '#EBF8FF';
+      iconColor = '#3182CE';
+    } else if (lowerTitle.includes('viettel') || lowerTitle.includes('nạp đt')) {
+      icon = '📱';
+      iconBg = '#FFFDF5';
+      iconColor = '#D69E2E';
+    } else if (lowerTitle.includes('highlands') || lowerTitle.includes('coffee')) {
+      icon = '☕';
+      iconBg = '#FFF5F7';
+      iconColor = '#D53F8C';
+    }
+
+    return {
+      id: tx._id || tx.reference,
+      title,
+      subtitle: tx.type === 'DEPOSIT' ? 'Nạp tiền vào ví' : tx.type === 'WITHDRAW' ? 'Rút tiền ngân hàng' : 'Giao dịch',
+      time: formatTxDate(tx.createdAt),
+      amount,
+      type: tx.type,
+      badge: isOut ? 'Chi' : 'Thu',
+      icon,
+      bgColor: iconBg,
+      color: iconColor,
+    };
+  };
+
+  const recentTxs = (transactionsData?.items ?? [])
+    .slice(0, 5)
+    .map(mapRealTransaction);
+
+  // Dynamic monthly income/expenses calculation
+  const getMonthlyStats = () => {
+    let income = 0;
+    let expense = 0;
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+
+    const allTx = transactionsData?.items || [];
+    allTx.forEach((tx) => {
+      // Only count success transactions
+      if (tx.status !== 'SUCCESS') return;
+
+      const txDate = new Date(tx.createdAt);
+      if (txDate.getFullYear() === currentYear && txDate.getMonth() === currentMonth) {
+        const isOut =
+          tx.type === 'TRANSFER' ||
+          tx.type === 'BANK_TRANSFER' ||
+          tx.type === 'WITHDRAW' ||
+          tx.type === 'PAYMENT';
+        if (isOut) {
+          expense += tx.amount;
+        } else {
+          income += tx.amount;
+        }
+      }
+    });
+    return { income, expense };
+  };
+
+  const { income: totalIncomeThisMonth, expense: totalExpenseThisMonth } = getMonthlyStats();
+
+  const getChartData = () => {
+    const months = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({
+        month: `Th.${d.getMonth() + 1}`,
+        year: d.getFullYear(),
+        monthNum: d.getMonth(),
+        rawThu: 0,
+        rawChi: 0,
+      });
+    }
+
+    const allTx = transactionsData?.items || [];
+    allTx.forEach((tx) => {
+      if (tx.status !== 'SUCCESS') return;
+      const txDate = new Date(tx.createdAt);
+      const txYear = txDate.getFullYear();
+      const txMonth = txDate.getMonth();
+      const isOut =
+        tx.type === 'TRANSFER' ||
+        tx.type === 'BANK_TRANSFER' ||
+        tx.type === 'WITHDRAW' ||
+        tx.type === 'PAYMENT';
+
+      const match = months.find((m) => m.year === txYear && m.monthNum === txMonth);
+      if (match) {
+        if (isOut) {
+          match.rawChi += tx.amount;
+        } else {
+          match.rawThu += tx.amount;
+        }
+      }
+    });
+
+    let maxVal = 100000;
+    months.forEach((m) => {
+      if (m.rawThu > maxVal) maxVal = m.rawThu;
+      if (m.rawChi > maxVal) maxVal = m.rawChi;
+    });
+
+    return months.map((m) => ({
+      month: m.month,
+      thu: m.rawThu === 0 ? 0 : (m.rawThu / maxVal) * 90 + 10,
+      chi: m.rawChi === 0 ? 0 : (m.rawChi / maxVal) * 90 + 10,
+    }));
+  };
+
+  const chartData = getChartData();
+
+  const getCategoryExpenses = () => {
+    const categories: Record<string, { amount: number; barColor: string }> = {
+      'Ăn uống': { amount: 0, barColor: '#F97316' },
+      'Hóa đơn': { amount: 0, barColor: '#3B82F6' },
+      'Mua sắm': { amount: 0, barColor: '#EC4899' },
+      'Giải trí': { amount: 0, barColor: '#A855F7' },
+      'Khác': { amount: 0, barColor: '#64748B' },
+    };
+
+    const allTx = transactionsData?.items || [];
+    let totalPayments = 0;
+
+    allTx.forEach((tx) => {
+      if (tx.status !== 'SUCCESS') return;
+      if (tx.type === 'PAYMENT') {
+        totalPayments += tx.amount;
+        const desc = (tx.description || '').toLowerCase();
+        if (
+          desc.includes('ăn') ||
+          desc.includes('food') ||
+          desc.includes('uống') ||
+          desc.includes('coffee') ||
+          desc.includes('cà phê')
+        ) {
+          categories['Ăn uống'].amount += tx.amount;
+        } else if (
+          desc.includes('điện') ||
+          desc.includes('nước') ||
+          desc.includes('internet') ||
+          desc.includes('evn') ||
+          desc.includes('hóa đơn')
+        ) {
+          categories['Hóa đơn'].amount += tx.amount;
+        } else if (
+          desc.includes('shopee') ||
+          desc.includes('mua sắm') ||
+          desc.includes('lazada') ||
+          desc.includes('tiki') ||
+          desc.includes('shop')
+        ) {
+          categories['Mua sắm'].amount += tx.amount;
+        } else if (
+          desc.includes('phim') ||
+          desc.includes('vé') ||
+          desc.includes('game') ||
+          desc.includes('chơi') ||
+          desc.includes('giải trí')
+        ) {
+          categories['Giải trí'].amount += tx.amount;
+        } else {
+          categories['Khác'].amount += tx.amount;
+        }
+      }
+    });
+
+    return Object.keys(categories)
+      .map((label) => {
+        const cat = categories[label];
+        const percent = totalPayments > 0 ? Math.round((cat.amount / totalPayments) * 100) : 0;
+        return {
+          label,
+          amount: cat.amount,
+          percent,
+          barColor: cat.barColor,
+        };
+      })
+      .sort((a, b) => b.amount - a.amount);
+  };
+
+  const categoryExpenses = getCategoryExpenses();
+
+  const currentMonthNum = new Date().getMonth() + 1;
 
   return (
     <div className={styles.dashboardContainer}>
@@ -170,7 +353,7 @@ export function DashboardPage() {
             </div>
             <div className={styles.balanceTrend}>
               <span className={styles.trendArrow}>▲</span>
-              <span>+2.350.000 đ tháng này</span>
+              <span>+0 đ tháng này</span>
             </div>
             <div className={styles.cardNumber}>
               **** **** **** {bankAccounts?.[0]?.accountNumber?.slice(-4) || '4821'}
@@ -253,7 +436,7 @@ export function DashboardPage() {
                 </div>
                 <div>
                   <div className={styles.bankCardMask}>**** {bankAccounts?.[1]?.accountNumber?.slice(-4) || '7239'}</div>
-                  <div className={styles.bankCardBalance}>105.000.000 đ</div>
+                  <div className={styles.bankCardBalance}>0 đ</div>
                 </div>
               </div>
             </div>
@@ -266,25 +449,31 @@ export function DashboardPage() {
               <Link to="/transactions" className={styles.sectionLink}>Xem tất cả</Link>
             </div>
             <div className={styles.transactionsList}>
-              {RECENT_TRANSACTIONS.slice(0, 4).map((tx) => (
-                <div key={tx.id} className={styles.txRow}>
-                  <div className={styles.txLeft}>
-                    <div
-                      className={styles.txIconBox}
-                      style={{ backgroundColor: tx.bgColor, color: tx.color }}
-                    >
-                      {tx.icon}
-                    </div>
-                    <div>
-                      <h4 className={styles.txTitle}>{tx.title}</h4>
-                      <span className={styles.txTime}>{tx.time}</span>
-                    </div>
-                  </div>
-                  <span className={`${styles.txAmount} ${tx.amount > 0 ? styles.positive : styles.negative}`}>
-                    {tx.amount > 0 ? '+' : ''}{tx.amount.toLocaleString('vi-VN')} đ
-                  </span>
+              {recentTxs.length === 0 ? (
+                <div style={{ padding: '20px 0', color: '#94A3B8', textAlign: 'center', fontSize: '0.9rem' }}>
+                  Chưa có giao dịch nào
                 </div>
-              ))}
+              ) : (
+                recentTxs.slice(0, 4).map((tx) => (
+                  <div key={tx.id} className={styles.txRow}>
+                    <div className={styles.txLeft}>
+                      <div
+                        className={styles.txIconBox}
+                        style={{ backgroundColor: tx.bgColor, color: tx.color }}
+                      >
+                        {tx.icon}
+                      </div>
+                      <div>
+                        <h4 className={styles.txTitle}>{tx.title}</h4>
+                        <span className={styles.txTime}>{tx.time}</span>
+                      </div>
+                    </div>
+                    <span className={`${styles.txAmount} ${tx.amount > 0 ? styles.positive : styles.negative}`}>
+                      {tx.amount > 0 ? '+' : ''}{tx.amount.toLocaleString('vi-VN')} đ
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
           </section>
         </main>
@@ -310,7 +499,7 @@ export function DashboardPage() {
               <span className={styles.metricSymbol}>đ</span>
             </div>
             <div className={styles.metricFooter}>
-              <span className={styles.trendUp}>▲ +2.35tr</span>
+              <span className={styles.trendUp}>▲ +0đ</span>
               <span className={styles.trendLabel}>tháng này</span>
             </div>
           </div>
@@ -318,7 +507,7 @@ export function DashboardPage() {
           {/* Card 2: Monthly Income */}
           <div className={styles.metricCard}>
             <div className={styles.metricHeader}>
-              <span className={styles.metricLabel}>Tổng thu tháng 5</span>
+              <span className={styles.metricLabel}>Tổng thu tháng {currentMonthNum}</span>
               <div className={styles.metricIconCircle} style={{ backgroundColor: '#DCFCE7', color: '#16A34A' }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <line x1="12" y1="5" x2="12" y2="19" />
@@ -327,11 +516,11 @@ export function DashboardPage() {
               </div>
             </div>
             <div className={styles.metricValueWrapper}>
-              <span className={styles.metricValue}>8.200.000</span>
+              <span className={styles.metricValue}>{totalIncomeThisMonth.toLocaleString('vi-VN')}</span>
               <span className={styles.metricSymbol}>đ</span>
             </div>
             <div className={styles.metricFooter}>
-              <span className={styles.trendUp}>▲ +12%</span>
+              <span className={styles.trendUp}>▲ 0%</span>
               <span className={styles.trendLabel}>so tháng trước</span>
             </div>
           </div>
@@ -339,7 +528,7 @@ export function DashboardPage() {
           {/* Card 3: Monthly Expenses */}
           <div className={styles.metricCard}>
             <div className={styles.metricHeader}>
-              <span className={styles.metricLabel}>Tổng chi tháng 5</span>
+              <span className={styles.metricLabel}>Tổng chi tháng {currentMonthNum}</span>
               <div className={styles.metricIconCircle} style={{ backgroundColor: '#FEE2E2', color: '#EF4444' }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <line x1="12" y1="19" x2="12" y2="5" />
@@ -348,11 +537,11 @@ export function DashboardPage() {
               </div>
             </div>
             <div className={styles.metricValueWrapper}>
-              <span className={styles.metricValue}>5.850.000</span>
+              <span className={styles.metricValue}>{totalExpenseThisMonth.toLocaleString('vi-VN')}</span>
               <span className={styles.metricSymbol}>đ</span>
             </div>
             <div className={styles.metricFooter}>
-              <span className={styles.trendDown}>▼ -8%</span>
+              <span className={styles.trendDown}>▼ 0%</span>
               <span className={styles.trendLabel}>so tháng trước</span>
             </div>
           </div>
@@ -369,12 +558,12 @@ export function DashboardPage() {
               </div>
             </div>
             <div className={styles.metricValueWrapper}>
-              <span className={styles.metricValue}>105.000.000</span>
+              <span className={styles.metricValue}>0</span>
               <span className={styles.metricSymbol}>đ</span>
             </div>
             <div className={styles.metricFooter}>
-              <span className={styles.trendUp}>▲ Lãi</span>
-              <span className={styles.trendLabel}>5.5%/năm</span>
+              <span className={styles.trendUp}>-</span>
+              <span className={styles.trendLabel}>Chưa đăng ký</span>
             </div>
           </div>
         </section>
@@ -457,7 +646,7 @@ export function DashboardPage() {
               {/* CSS Native Bar Chart */}
               <div className={styles.chartContainer}>
                 <div className={styles.chartBars}>
-                  {CHART_DATA.map((c) => (
+                  {chartData.map((c) => (
                     <div key={c.month} className={styles.chartColGroup}>
                       <div className={styles.chartColWrapper}>
                         <div className={styles.chartBarThu} style={{ height: `${c.thu}%` }} />
@@ -478,55 +667,61 @@ export function DashboardPage() {
               </div>
               
               <div className={styles.tableWrapper}>
-                <table className={styles.desktopTable}>
-                  <thead>
-                    <tr>
-                      <th>NỘI DUNG</th>
-                      <th>NGÀY</th>
-                      <th>LOẠI</th>
-                      <th style={{ textAlign: 'right' }}>SỐ TIỀN</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {RECENT_TRANSACTIONS.map((tx) => (
-                      <tr key={tx.id}>
-                        <td>
-                          <div className={styles.tableMerchant}>
-                            <div
-                              className={styles.merchantIcon}
-                              style={{ backgroundColor: tx.bgColor, color: tx.color }}
-                            >
-                              {tx.icon}
-                            </div>
-                            <div className={styles.merchantMeta}>
-                              <span className={styles.merchantTitle}>{tx.title}</span>
-                              <span className={styles.merchantSubtitle}>{tx.subtitle}</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <span className={styles.tableDate}>{tx.time}</span>
-                        </td>
-                        <td>
-                          <span
-                            className={styles.tableBadge}
-                            style={{
-                              backgroundColor: tx.badge === 'Thu' ? '#D1FAE5' : tx.badge === 'Chi' ? '#FEE2E2' : '#FEF3C7',
-                              color: tx.badge === 'Thu' ? '#065F46' : tx.badge === 'Chi' ? '#991B1B' : '#92400E',
-                            }}
-                          >
-                            {tx.badge}
-                          </span>
-                        </td>
-                        <td style={{ textAlign: 'right' }}>
-                          <span className={`${styles.tableAmount} ${tx.amount > 0 ? styles.positiveText : styles.negativeText}`}>
-                            {tx.amount > 0 ? '+' : ''}{tx.amount.toLocaleString('vi-VN')} đ
-                          </span>
-                        </td>
+                {recentTxs.length === 0 ? (
+                  <div style={{ padding: '40px 0', color: '#94A3B8', textAlign: 'center' }}>
+                    Chưa có giao dịch nào
+                  </div>
+                ) : (
+                  <table className={styles.desktopTable}>
+                    <thead>
+                      <tr>
+                        <th>NỘI DUNG</th>
+                        <th>NGÀY</th>
+                        <th>LOẠI</th>
+                        <th style={{ textAlign: 'right' }}>SỐ TIỀN</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {recentTxs.map((tx) => (
+                        <tr key={tx.id}>
+                          <td>
+                            <div className={styles.tableMerchant}>
+                              <div
+                                className={styles.merchantIcon}
+                                style={{ backgroundColor: tx.bgColor, color: tx.color }}
+                              >
+                                {tx.icon}
+                              </div>
+                              <div className={styles.merchantMeta}>
+                                <span className={styles.merchantTitle}>{tx.title}</span>
+                                <span className={styles.merchantSubtitle}>{tx.subtitle}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <span className={styles.tableDate}>{tx.time}</span>
+                          </td>
+                          <td>
+                            <span
+                              className={styles.tableBadge}
+                              style={{
+                                backgroundColor: tx.badge === 'Chi' ? '#FEE2E2' : '#D1FAE5',
+                                color: tx.badge === 'Chi' ? '#991B1B' : '#065F46',
+                              }}
+                            >
+                              {tx.badge}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <span className={`${styles.tableAmount} ${tx.amount > 0 ? styles.positiveText : styles.negativeText}`}>
+                              {tx.amount > 0 ? '+' : ''}{tx.amount.toLocaleString('vi-VN')} đ
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </div>
           </div>
@@ -553,7 +748,7 @@ export function DashboardPage() {
                     <span className={styles.cardBoxBalance}>{displayBalance.toLocaleString('vi-VN')} đ</span>
                   </div>
                   <div className={styles.cardBoxFooter}>
-                    <span>Chủ thẻ: <strong>NGUYEN VAN AN</strong></span>
+                    <span>Chủ thẻ: <strong>{user?.fullName?.toUpperCase() || 'NGUYÊN VĂN AN'}</strong></span>
                     <span>Hết hạn: <strong>05/28</strong></span>
                   </div>
                 </div>
@@ -568,11 +763,11 @@ export function DashboardPage() {
                     **** **** **** {bankAccounts?.[1]?.accountNumber?.slice(-4) || '7239'}
                   </div>
                   <div className={styles.cardBoxAmountRow}>
-                    <span className={styles.cardBoxBalance}>105.000.000 đ</span>
+                    <span className={styles.cardBoxBalance}>0 đ</span>
                   </div>
                   <div className={styles.cardBoxFooter}>
-                    <span>Lãi suất: <strong>5.5%/năm</strong></span>
-                    <span>Đáo hạn: <strong>12/2026</strong></span>
+                    <span>Lãi suất: <strong>0%/năm</strong></span>
+                    <span>Đáo hạn: <strong>Chưa mở</strong></span>
                   </div>
                 </div>
               </div>
@@ -582,7 +777,7 @@ export function DashboardPage() {
             <div className={styles.desktopCard}>
               <h3 className={styles.desktopCardTitle} style={{ marginBottom: 16 }}>Chi tiêu theo danh mục</h3>
               <div className={styles.progressStack}>
-                {CATEGORY_EXPENSES.map((cat) => (
+                {categoryExpenses.map((cat) => (
                   <div key={cat.label} className={styles.progressItem}>
                     <div className={styles.progressItemHeader}>
                       <span className={styles.progressLabel}>{cat.label}</span>

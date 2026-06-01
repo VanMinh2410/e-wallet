@@ -634,70 +634,89 @@ export class TransactionsService implements OnModuleInit, OnModuleDestroy {
     const responseCode = verify.vnp_ResponseCode;
     const amount = Number(verify.vnp_Amount); // in VND
 
-    const tx = await this.transactionModel.findOne({ reference, type: TransactionType.DEPOSIT });
-    if (!tx) {
-      throw new BusinessException('Giao dịch không tồn tại', ErrorCodes.TRANSACTION_NOT_FOUND, HttpStatus.NOT_FOUND);
-    }
-
-    if (tx.status === TransactionStatus.SUCCESS) {
-      return { isVerified: true, message: 'Giao dịch đã được xử lý trước đó', reference };
-    }
-
-    if (responseCode === '00') {
-      // Success! Update balance
-      const session = await this.connection.startSession();
-      session.startTransaction();
-      try {
-        await this.walletModel.findByIdAndUpdate(
-          tx.toWalletId,
-          { $inc: { balance: amount } },
-          { session },
-        );
-        tx.status = TransactionStatus.SUCCESS;
-        tx.amount = amount;
-        await tx.save({ session });
-        await session.commitTransaction();
-
-        const wallet = await this.walletModel.findById(tx.toWalletId);
-        const txUserId = tx.userId.toString();
-        this.notificationGateway.emitBalanceUpdated(txUserId, wallet?.balance ?? 0);
-        await this.notificationsService.create(
-          txUserId,
-          'Nạp tiền VNPay thành công',
-          `Số dư +${amount.toLocaleString('vi-VN')}đ qua VNPay`,
-          'topup',
-        );
-        await this.auditModel.create({
-          userId: tx.userId,
-          action: 'TOPUP_VNPAY_SUCCESS',
-          resource: 'transaction',
-          metadata: { reference },
-        });
-
-        // Send email receipt
-        const userForEmail = await this.userModel.findById(tx.userId);
-        if (userForEmail) {
-          void this.mailerService.sendTransactionEmail({
-            to: userForEmail.email,
-            type: 'topup',
-            amount,
-            reference,
-            newBalance: wallet?.balance,
-            date: new Date(),
-          });
-        }
-
-        return { isVerified: true, message: 'Nạp tiền thành công', reference };
-      } catch (e) {
-        await session.abortTransaction();
-        throw e;
-      } finally {
-        session.endSession();
+    const lockKey = `lock:vnpay:${reference}`;
+    const acquired = await this.redisService.getClient().set(lockKey, '1', 'EX', 5, 'NX');
+    if (!acquired) {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const doubleCheckTx = await this.transactionModel.findOne({ reference });
+      if (doubleCheckTx && doubleCheckTx.status === TransactionStatus.SUCCESS) {
+        return { isVerified: true, message: 'Giao dịch đã được xử lý trước đó', reference };
       }
-    } else {
-      tx.status = TransactionStatus.CANCELLED;
-      await tx.save();
-      return { isVerified: false, message: 'Giao dịch VNPay thất bại hoặc bị hủy', reference };
+      throw new BusinessException(
+        'Giao dịch đang được xử lý bởi yêu cầu khác, vui lòng tải lại trang.',
+        ErrorCodes.VALIDATION_ERROR,
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    try {
+      const tx = await this.transactionModel.findOne({ reference, type: TransactionType.DEPOSIT });
+      if (!tx) {
+        throw new BusinessException('Giao dịch không tồn tại', ErrorCodes.TRANSACTION_NOT_FOUND, HttpStatus.NOT_FOUND);
+      }
+
+      if (tx.status === TransactionStatus.SUCCESS) {
+        return { isVerified: true, message: 'Giao dịch đã được xử lý trước đó', reference };
+      }
+
+      if (responseCode === '00') {
+        // Success! Update balance
+        const session = await this.connection.startSession();
+        session.startTransaction();
+        try {
+          await this.walletModel.findByIdAndUpdate(
+            tx.toWalletId,
+            { $inc: { balance: amount } },
+            { session },
+          );
+          tx.status = TransactionStatus.SUCCESS;
+          tx.amount = amount;
+          await tx.save({ session });
+          await session.commitTransaction();
+
+          const wallet = await this.walletModel.findById(tx.toWalletId);
+          const txUserId = tx.userId.toString();
+          this.notificationGateway.emitBalanceUpdated(txUserId, wallet?.balance ?? 0);
+          await this.notificationsService.create(
+            txUserId,
+            'Nạp tiền VNPay thành công',
+            `Số dư +${amount.toLocaleString('vi-VN')}đ qua VNPay`,
+            'topup',
+          );
+          await this.auditModel.create({
+            userId: tx.userId,
+            action: 'TOPUP_VNPAY_SUCCESS',
+            resource: 'transaction',
+            metadata: { reference },
+          });
+
+          // Send email receipt
+          const userForEmail = await this.userModel.findById(tx.userId);
+          if (userForEmail) {
+            void this.mailerService.sendTransactionEmail({
+              to: userForEmail.email,
+              type: 'topup',
+              amount,
+              reference,
+              newBalance: wallet?.balance,
+              date: new Date(),
+            });
+          }
+
+          return { isVerified: true, message: 'Nạp tiền thành công', reference };
+        } catch (e) {
+          await session.abortTransaction();
+          throw e;
+        } finally {
+          session.endSession();
+        }
+      } else {
+        tx.status = TransactionStatus.CANCELLED;
+        await tx.save();
+        return { isVerified: false, message: 'Giao dịch VNPay thất bại hoặc bị hủy', reference };
+      }
+    } finally {
+      await this.redisService.del(lockKey);
     }
   }
 }

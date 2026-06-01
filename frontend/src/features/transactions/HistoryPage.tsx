@@ -82,7 +82,7 @@ export function HistoryPage() {
       icon = '🏦';
       iconBg = '#EDF2F7';
       iconColor = '#4A5568';
-    } else if (tx.type === 'TRANSFER' || tx.type === 'BANK_TRANSFER') {
+    } else if (tx.type === 'TRANSFER' || tx.type === 'BANK_TRANSFER' || tx.type === 'RECEIVE') {
       title = tx.description || (isOut ? 'Chuyển tiền' : 'Nhận tiền');
       icon = isOut ? '↗' : '↓';
       iconBg = isOut ? '#EBF8FF' : '#E6FFFA';

@@ -5,6 +5,7 @@ export type TransactionDocument = Transaction & Document;
 
 export enum TransactionType {
   TRANSFER = 'TRANSFER',
+  RECEIVE = 'RECEIVE',
   DEPOSIT = 'DEPOSIT',
   WITHDRAW = 'WITHDRAW',
   BANK_TRANSFER = 'BANK_TRANSFER',
