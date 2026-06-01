@@ -1,0 +1,42 @@
+{
+  "projectName": "HKi Wallet",
+  "version": "1.0.0",
+  "defaultAgent": "project-manager",
+  "rulesEnabled": true,
+  "autoValidate": true,
+  "language": "vi",
+  "techStack": {
+    "frontend": "React 18 + Redux Toolkit + React Query",
+    "backend": "NestJS 10 + Mongoose",
+    "database": "MongoDB 7 (Replica Set)",
+    "cache": "Redis 7",
+    "realtime": "Socket.IO 4",
+    "queue": "BullMQ",
+    "devops": "Docker Compose + GitHub Actions"
+  },
+  "rules": {
+    "enforceTransactions": true,
+    "enforceJwtSecurity": true,
+    "enforceRateLimit": true,
+    "enforceErrorFormat": true,
+    "enforceNamingConvention": true
+  },
+  "agents": {
+    "default": "project-manager",
+    "available": [
+      "project-manager",
+      "backend-lead",
+      "frontend-lead",
+      "qa-engineer",
+      "devops-engineer",
+      "systems-architect",
+      "ui-ux-designer"
+    ]
+  },
+  "paths": {
+    "backend": "apps/backend",
+    "frontend": "apps/frontend",
+    "shared": "packages/shared",
+    "docs": "docs"
+  }
+}

@@ -1,0 +1,342 @@
+/* =================== MOBILE LAYOUT (DEFAULT) =================== */
+.shell {
+  max-width: 100%;
+  margin: 0;
+  min-height: 100vh;
+  background: var(--color-bg);
+  position: relative;
+  box-shadow: none;
+}
+
+.mainContainer {
+  display: block;
+  width: 100%;
+}
+
+.main {
+  padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 16px);
+}
+
+.sidebar {
+  display: none;
+}
+
+.topbar {
+  display: none;
+}
+
+.hideNav .main {
+  padding-bottom: 0;
+}
+
+/* =================== DESKTOP LAYOUT (>= 1024px) =================== */
+@media (min-width: 1024px) {
+  body {
+    background-color: #F1F5F9 !important;
+  }
+
+  .shell {
+    max-width: 100% !important;
+    width: 100vw;
+    margin: 0;
+    box-shadow: none;
+    display: flex;
+    flex-direction: row;
+    min-height: 100vh;
+    background: #F1F5F9;
+    overflow: hidden;
+  }
+
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    width: 260px;
+    height: 100vh;
+    background: #0C447C;
+    color: #FFFFFF;
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 100;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+    border-radius: 0;
+    border: none;
+  }
+
+  .mainContainer {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    margin-left: 260px; /* offset sidebar */
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 70px;
+    background: #FFFFFF;
+    padding: 0 24px;
+    border-bottom: 1px solid #E2E8F0;
+    position: sticky;
+    top: 0;
+    z-index: 90;
+    box-sizing: border-box;
+  }
+
+  .main {
+    padding: 24px;
+    flex: 1;
+    background: #F1F5F9;
+    overflow-y: auto;
+    padding-bottom: 32px;
+  }
+}
+
+/* =================== SIDEBAR COMPONENTS =================== */
+.sidebarHeader {
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.logoText {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 900;
+  color: #FFFFFF;
+  letter-spacing: 1px;
+}
+
+.logoSubtitle {
+  font-size: 9px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 1.5px;
+}
+
+.profileBadge {
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #10B981; /* Green circle avatar */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: #FFFFFF;
+  flex-shrink: 0;
+}
+
+.profileInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.profileName {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #FFFFFF;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.profileId {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.5px;
+}
+
+.menuList {
+  padding: 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.menuList::-webkit-scrollbar {
+  width: 4px;
+}
+
+.menuList::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+.menuGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.groupTitle {
+  font-size: 9px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 6px;
+  padding-left: 12px;
+  letter-spacing: 0.5px;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.menuItem:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #FFFFFF;
+}
+
+.menuItemActive {
+  background: rgba(255, 255, 255, 0.12);
+  color: #FFFFFF;
+}
+
+.menuIcon {
+  color: inherit;
+  flex-shrink: 0;
+}
+
+.badgeCount {
+  margin-left: auto;
+  background: #F59E0B; /* Orange circular badge */
+  color: #FFFFFF;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+.sidebarFooter {
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sidebarFooterItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.sidebarFooterItem:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #FFFFFF;
+}
+
+.sidebarFooterItemBtn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.sidebarFooterItemBtn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #EF4444;
+}
+
+/* =================== TOPBAR COMPONENTS =================== */
+.topbarTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1E293B;
+  margin: 0;
+}
+
+.searchBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #F1F5F9;
+  border-radius: 20px;
+  padding: 6px 16px;
+  width: 260px;
+  box-sizing: border-box;
+}
+
+.searchIcon {
+  color: #94A3B8;
+  flex-shrink: 0;
+}
+
+.searchInput {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 12.5px;
+  color: #334155;
+  width: 100%;
+}
+
+.topbarActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.circleBtn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #F1F5F9;
+  border: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.circleBtn:hover {
+  background: #E2E8F0;
+  color: #1E293B;
+}

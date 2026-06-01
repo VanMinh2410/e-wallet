@@ -1,0 +1,77 @@
+name: AI Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches: [main]
+
+jobs:
+  ai-review:
+    name: AI Code Review
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v40
+
+      - name: Generate diff summary
+        id: diff
+        run: |
+          git diff origin/main...HEAD -- '*.ts' '*.tsx' > /tmp/diff.txt
+          echo "Diff size: $(wc -l < /tmp/diff.txt) lines"
+
+      - name: AI Review với Claude (hoặc Gemini)
+        # Tùy chọn: Dùng AI API để tự động review
+        # Hiện tại là placeholder – cần cấu hình API key
+        run: |
+          echo "🤖 AI Code Review"
+          echo "================================"
+          echo "Files thay đổi:"
+          echo "${{ steps.changed-files.outputs.all_changed_files }}"
+          echo ""
+          echo "📋 Checklist review tự động:"
+          echo "  - [ ] Kiểm tra naming convention (chạy check-naming-convention.js)"
+          echo "  - [ ] Kiểm tra commit message convention"
+          echo "  - [ ] Kiểm tra API convention"
+          
+      - name: Chạy validators
+        run: |
+          node .claude/validators/check-naming-convention.js apps/ || true
+          node .claude/validators/check-api-convention.js apps/backend/src/ || true
+
+      - name: Comment review lên PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `## 🤖 AI Code Review Checklist
+
+            Tự động kiểm tra theo quy tắc \`.claude/rules/\`:
+
+            ### Cần kiểm tra thủ công:
+            - [ ] Transaction dùng MongoDB Session (xem: \`rules/database.md\`)
+            - [ ] API liên quan đến tiền có rate limiting (xem: \`rules/security.md\`)
+            - [ ] Socket emit sau khi commit (xem: \`skills/technical/socket-io-realtime.md\`)
+            - [ ] Response format chuẩn (xem: \`rules/api-conventions.md\`)
+            - [ ] Test coverage ≥ 80% cho code mới (xem: \`rules/testing.md\`)
+            - [ ] Không dùng \`any\` type trong TypeScript
+
+            ### Validator Output:
+            Xem chi tiết trong job logs bên trên.
+
+            ---
+            *AI Review tự động – vẫn cần human review trước khi merge*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
+            });

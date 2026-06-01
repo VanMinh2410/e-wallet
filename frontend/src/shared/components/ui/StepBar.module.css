@@ -1,0 +1,48 @@
+.steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 0;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+  background: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.active .dot {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.done .dot {
+  background: var(--color-success);
+  color: #fff;
+}
+
+.line {
+  width: 24px;
+  height: 2px;
+  background: var(--color-border);
+}
+
+.lineDone {
+  background: var(--color-success);
+}

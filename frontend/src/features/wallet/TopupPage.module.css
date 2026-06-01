@@ -1,0 +1,739 @@
+/* ============================================================
+   TopupPage Premium CSS — VietQR / Napas247 Style
+   ============================================================ */
+
+.pageShell {
+  min-height: 100vh;
+  background: #F1F5F9;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
+}
+
+/* --------- LAYOUT --------- */
+.layout {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+@media (min-width: 1024px) {
+  .layout {
+    flex-direction: row;
+    align-items: start;
+    gap: 24px;
+    padding: 24px;
+  }
+  .leftPanel {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .rightPanel {
+    width: 340px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 24px;
+  }
+}
+
+.leftPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.rightPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* --------- HEADER --------- */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #0C447C 0%, #1565C0 100%);
+  color: #fff;
+  padding: 16px 20px;
+  border-radius: 0;
+}
+
+@media (min-width: 1024px) {
+  .header {
+    border-radius: 16px 16px 0 0;
+  }
+}
+
+.headerTitle {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+}
+
+.headerBack {
+  background: rgba(255,255,255,0.15);
+  border: none;
+  border-radius: 10px;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  color: #fff;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.headerBack:hover {
+  background: rgba(255,255,255,0.25);
+}
+
+/* --------- STEP BAR --------- */
+.stepBar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 16px 20px;
+  background: #fff;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.stepItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.stepNum {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #E2E8F0;
+  color: #94A3B8;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.stepNum.active {
+  background: #0C447C;
+  color: #fff;
+}
+
+.stepNum.done {
+  background: #10B981;
+  color: #fff;
+}
+
+.stepLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: #94A3B8;
+  white-space: nowrap;
+}
+
+.stepLabel.active {
+  color: #0C447C;
+  font-weight: 700;
+}
+
+.stepLabel.done {
+  color: #10B981;
+}
+
+.stepDivider {
+  flex: 1;
+  height: 2px;
+  background: #E2E8F0;
+  margin: 0 8px;
+  max-width: 40px;
+}
+
+.stepDivider.done {
+  background: #10B981;
+}
+
+/* --------- CARD --------- */
+.card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-bottom: 1px solid #F1F5F9;
+  background: #FAFBFC;
+}
+
+.cardHeaderIcon {
+  width: 32px;
+  height: 32px;
+  background: #EFF6FF;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.cardHeaderTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.cardBody {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* --------- PAYMENT METHODS --------- */
+.methodGrid {
+  display: flex;
+  gap: 8px;
+}
+
+.methodBtn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 8px;
+  border-radius: 12px;
+  border: 2px solid #E2E8F0;
+  background: #F8FAFC;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748B;
+  transition: all 0.15s;
+}
+
+.methodBtn:hover {
+  border-color: #93C5FD;
+  background: #EFF6FF;
+}
+
+.methodBtn.methodActive {
+  border-color: #0C447C;
+  background: #EFF6FF;
+  color: #0C447C;
+}
+
+.methodIcon {
+  font-size: 22px;
+}
+
+/* --------- BANK ACCOUNT SELECT --------- */
+.bankSelect {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: #F8FAFC;
+  border-radius: 12px;
+  border: 1.5px solid #E2E8F0;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.bankSelect:hover {
+  border-color: #93C5FD;
+}
+
+.bankSelectLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bankLogo {
+  width: 40px;
+  height: 28px;
+  background: #1565C0;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: -0.5px;
+}
+
+.bankSelectInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.bankSelectName {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.bankSelectNum {
+  font-size: 12px;
+  color: #64748B;
+  margin-top: 1px;
+}
+
+/* --------- AMOUNT QUICK --------- */
+.sectionLabel {
+  font-size: 10px;
+  font-weight: 800;
+  color: #94A3B8;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.quickGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.quickBtn {
+  padding: 11px 4px;
+  border-radius: 10px;
+  border: 1.5px solid #E2E8F0;
+  background: #F8FAFC;
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+
+.quickBtn:hover, .quickBtn.quickActive {
+  border-color: #0C447C;
+  background: #EFF6FF;
+  color: #0C447C;
+}
+
+/* --------- AMOUNT INPUT --------- */
+.amountInputRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.currencyBadge {
+  background: linear-gradient(135deg, #0C447C 0%, #1565C0 100%);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 10px 14px;
+  border-radius: 10px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.bigAmountInput {
+  flex: 1;
+  background: #0F172A;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 20px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: -0.5px;
+  font-feature-settings: 'tnum';
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+.bigAmountInput::-webkit-inner-spin-button,
+.bigAmountInput::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+}
+
+/* --------- SECURITY NOTE --------- */
+.securityNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 14px;
+  background: #F0FDF4;
+  border-radius: 10px;
+  border: 1px solid #BBF7D0;
+  font-size: 12px;
+  color: #166534;
+  line-height: 1.5;
+}
+
+/* --------- PRIMARY BUTTON --------- */
+.primaryBtn {
+  width: 100%;
+  padding: 15px;
+  background: linear-gradient(135deg, #0C447C 0%, #1565C0 100%);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 14px rgba(12, 68, 124, 0.3);
+  letter-spacing: -0.2px;
+}
+
+.primaryBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(12, 68, 124, 0.4);
+}
+
+.primaryBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* --------- SUMMARY CARD --------- */
+.summaryCard {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+}
+
+.summaryHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 18px;
+  background: #FAFBFC;
+  border-bottom: 1px solid #F1F5F9;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.summaryBody {
+  padding: 8px 0;
+}
+
+.summaryRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 18px;
+  border-bottom: 1px solid #F8FAFC;
+  font-size: 13.5px;
+}
+
+.summaryLabel {
+  color: #64748B;
+  font-weight: 500;
+}
+
+.summaryValue {
+  font-weight: 700;
+  color: #0F172A;
+  text-align: right;
+}
+
+.summaryValueGreen {
+  font-weight: 700;
+  color: #059669;
+}
+
+.summaryTotal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  font-size: 15px;
+}
+
+.summaryTotalLabel {
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.summaryTotalValue {
+  font-size: 18px;
+  font-weight: 900;
+  color: #0C447C;
+}
+
+/* --------- HISTORY --------- */
+.historyCard {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+}
+
+.historyHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 18px;
+  background: #FAFBFC;
+  border-bottom: 1px solid #F1F5F9;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.historyItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  border-bottom: 1px solid #F8FAFC;
+  transition: background 0.1s;
+}
+
+.historyItem:last-child {
+  border-bottom: none;
+}
+
+.historyItem:hover {
+  background: #F8FAFC;
+}
+
+.historyDot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #EFF6FF;
+  color: #0C447C;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+.historyInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.historyMethod {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.historyDate {
+  font-size: 11px;
+  color: #94A3B8;
+  margin-top: 2px;
+}
+
+.historyAmount {
+  font-size: 14px;
+  font-weight: 800;
+  color: #059669;
+}
+
+/* --------- BANK INFO (Step 1) --------- */
+.bankInfoCard {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #E2E8F0;
+  overflow: hidden;
+}
+
+.bankInfoHeader {
+  background: linear-gradient(135deg, #0C447C 0%, #1565C0 100%);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bankInfoLogoBox {
+  width: 44px;
+  height: 30px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 900;
+  color: #fff;
+}
+
+.bankInfoName {
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.bankInfoSub {
+  font-size: 11px;
+  color: rgba(255,255,255,0.7);
+  margin-top: 2px;
+}
+
+.bankInfoRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 20px;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.bankInfoRowLabel {
+  font-size: 13px;
+  color: #64748B;
+  font-weight: 500;
+}
+
+.copyBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0C447C;
+  background: #EFF6FF;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.copyBtn:hover {
+  background: #DBEAFE;
+}
+
+.countdownRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: #FFFBEB;
+  border-top: 1px solid #FDE68A;
+}
+
+.countdownLabel {
+  font-size: 12px;
+  color: #92400E;
+  font-weight: 600;
+}
+
+.countdownValue {
+  font-size: 16px;
+  font-weight: 900;
+  color: #D97706;
+  font-feature-settings: 'tnum';
+}
+
+/* --------- QR PREVIEW --------- */
+.qrPreviewCard {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #E2E8F0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.qrPreviewTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: #64748B;
+}
+
+.qrFrame {
+  position: relative;
+  display: inline-flex;
+}
+
+.qrLogo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 32px;
+  height: 32px;
+  background: #0C447C;
+  border-radius: 6px;
+  color: #fff;
+  font-weight: 900;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* --------- SUCCESS --------- */
+.successWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.successCircle {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #059669 0%, #10B981 100%);
+  color: #fff;
+  font-size: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(5, 150, 105, 0.3);
+  animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes popIn {
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.successTitle {
+  font-size: 22px;
+  font-weight: 900;
+  color: #0F172A;
+  letter-spacing: -0.5px;
+}
+
+.successAmount {
+  font-size: 32px;
+  font-weight: 900;
+  color: #059669;
+  letter-spacing: -1px;
+}
+
+.successDesc {
+  font-size: 14px;
+  color: #64748B;
+  line-height: 1.6;
+}

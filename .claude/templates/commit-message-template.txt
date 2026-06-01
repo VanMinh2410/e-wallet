@@ -1,0 +1,18 @@
+<type>(<scope>): <subject>
+
+# Type: feat | fix | refactor | test | docs | style | chore | perf | ci | hotfix
+# Scope: auth | wallet | transaction | transfer | topup | withdraw | qr | notification | user | queue | socket | cache | config | docker | db
+# Subject: động từ nguyên thể, không viết hoa, không dấu chấm, tối đa 72 ký tự
+
+# Body (tùy chọn) – giải thích WHY, không phải WHAT
+# Cách nhau 1 dòng trống so với subject
+
+# Footer (tùy chọn)
+# Closes #<issue-number>
+# BREAKING CHANGE: <description>
+
+# Ví dụ:
+# feat(transfer): implement money transfer with MongoDB transaction
+# fix(auth): prevent refresh token reuse after logout
+# refactor(wallet): extract balance validation to helper
+# test(transaction): add concurrent transfer test cases

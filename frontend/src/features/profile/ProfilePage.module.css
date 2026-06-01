@@ -1,0 +1,256 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  background-color: #F8FAFC;
+  min-height: 100%;
+}
+
+/* =================== BLUE HERO HEADER =================== */
+.hero {
+  background: linear-gradient(180deg, #0C447C 0%, #082E55 100%);
+  color: #FFFFFF;
+  text-align: center;
+  padding: 20px 20px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.avatarCircle {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.profileName {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+.profileId {
+  margin: 0 0 12px;
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 0.2px;
+}
+
+.kycBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #10B981; /* bright green */
+  color: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2);
+}
+
+.kycPending {
+  background: #F59E0B;
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.2);
+}
+
+.kycNone {
+  background: #64748B;
+  box-shadow: 0 2px 6px rgba(100, 116, 139, 0.2);
+}
+
+/* =================== MENU BLOCKS =================== */
+.content {
+  padding: 16px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.menuBlock {
+  background: #FFFFFF;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+  border: 1px solid #F1F5F9;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 14px 16px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-bottom: 1px solid #F1F5F9;
+  transition: background-color 0.2s ease;
+}
+
+.menuItem:last-child {
+  border-bottom: none;
+}
+
+.menuItem:hover {
+  background-color: #F8FAFC;
+}
+
+.itemLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.iconWrapper {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.itemLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.itemRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.itemValue {
+  font-size: 12px;
+  color: #94A3B8;
+}
+
+.chevron {
+  color: #CBD5E1;
+  font-size: 14px;
+  margin-left: 2px;
+}
+
+.logoutText {
+  color: #EF4444 !important;
+}
+
+/* =================== MODAL & LISTS =================== */
+.infoModal {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.infoField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-bottom: 1px solid #F1F5F9;
+  padding-bottom: 8px;
+}
+
+.infoField:last-child {
+  border-bottom: none;
+}
+
+.infoLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94A3B8;
+  text-transform: uppercase;
+}
+
+.infoValue {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.bankSectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  border-bottom: 1px solid #F1F5F9;
+  padding-bottom: 8px;
+}
+
+.bankSectionHeader h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.bankList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.bankCardItem {
+  background: #F8FAFC;
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid #E2E8F0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.bankCardInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bankCardName {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.bankCardNumber {
+  font-size: 11px;
+  color: #64748B;
+  font-family: monospace;
+}
+
+.bankVerifiedBadge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #10B981;
+  background: #D1FAE5;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+@media (min-width: 1024px) {
+  .hero {
+    max-width: 500px;
+    margin: 20px auto 0;
+    border-radius: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  }
+  .content {
+    max-width: 500px;
+    margin: 0 auto;
+  }
+}
