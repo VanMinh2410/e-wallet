@@ -8,13 +8,13 @@ export function useSocket(userId: string | undefined, handlers: {
   onBalanceUpdated?: (balance: number) => void;
   onTransactionCompleted?: (data: unknown) => void;
   onNotification?: (data: unknown) => void;
-}) {
+}, role?: string) {
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
     if (!userId) return;
     const socket = io(`${SOCKET_URL}/notifications`, {
-      auth: { userId },
+      auth: { userId, role },
       transports: ['websocket'],
     });
     socketRef.current = socket;
@@ -26,7 +26,7 @@ export function useSocket(userId: string | undefined, handlers: {
     return () => {
       socket.disconnect();
     };
-  }, [userId, getAccessToken()]);
+  }, [userId, role, getAccessToken()]);
 
   return socketRef;
 }

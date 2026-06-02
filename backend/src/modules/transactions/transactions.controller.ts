@@ -66,8 +66,9 @@ export class TransactionsController {
     @Body('qrData') qrData: string,
     @Body('amount') amount?: number,
     @Body('otpCode') otpCode?: string,
+    @Body('description') description?: string,
   ) {
-    return this.transactionsService.qrPayment(user.userId, walletId, qrData, amount, otpCode);
+    return this.transactionsService.qrPayment(user.userId, walletId, qrData, amount, otpCode, description);
   }
 
   @Post('webhooks/payment')

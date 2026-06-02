@@ -87,4 +87,52 @@ export class AdminController {
   deleteBankAccount(@Param('id') id: string) {
     return this.adminService.deleteBankAccount(id);
   }
+
+  @Post('users/:id/kyc')
+  updateKycStatus(
+    @CurrentUser() admin: AuthUser,
+    @Param('id') id: string,
+    @Body('kycStatus') kycStatus: string,
+  ) {
+    return this.adminService.updateKycStatus(id, kycStatus, admin.userId);
+  }
+
+  @Post('users/:id/role')
+  updateRole(
+    @CurrentUser() admin: AuthUser,
+    @Param('id') id: string,
+    @Body('role') role: string,
+  ) {
+    return this.adminService.updateRole(id, role, admin.userId);
+  }
+
+  @Post('users/:id/reset-password')
+  resetPassword(
+    @CurrentUser() admin: AuthUser,
+    @Param('id') id: string,
+  ) {
+    return this.adminService.resetPassword(id, admin.userId);
+  }
+
+  @Post('users/:id/limit')
+  updateLimit(
+    @CurrentUser() admin: AuthUser,
+    @Param('id') id: string,
+    @Body('limit') limit: number,
+  ) {
+    return this.adminService.updateLimit(id, Number(limit), admin.userId);
+  }
+
+  @Get('users/:id/login-logs')
+  getLoginLogs(@Param('id') id: string) {
+    return this.adminService.getLoginLogs(id);
+  }
+
+  @Post('transactions/:id/refund')
+  refundTransaction(
+    @CurrentUser() admin: AuthUser,
+    @Param('id') id: string,
+  ) {
+    return this.adminService.refundTransaction(id, admin.userId);
+  }
 }

@@ -16,16 +16,29 @@ export function Layout() {
   const { toast } = useToast();
   const user = useAppSelector((s) => s.auth.user);
 
+  // Fetch latest 50 tx IDs to compute "unread" badge
   const { data: txData } = useQuery({
     queryKey: ['layout-transactions-count'],
     queryFn: async () => {
-      const res = await api.get('/transactions', { params: { page: 1, limit: 1 } });
-      return unwrap<{ total: number }>(res);
+      const res = await api.get('/transactions', { params: { page: 1, limit: 50 } });
+      const result = unwrap<{ items: { _id?: string; reference: string }[]; total: number }>(res);
+      // Compute unread = items not yet in localStorage viewed set
+      let viewedIds: Set<string>;
+      try {
+        const raw = localStorage.getItem('tx_viewed_ids');
+        viewedIds = raw ? new Set(JSON.parse(raw) as string[]) : new Set();
+      } catch {
+        viewedIds = new Set();
+      }
+      const unread = result.items.filter(
+        (t) => !viewedIds.has(t._id || t.reference)
+      ).length;
+      return { total: result.total, unread };
     },
     enabled: !!user,
   });
 
-  const txCount = txData?.total ?? 0;
+  const txUnread = txData?.unread ?? 0;
 
   const hideNav = HIDE_NAV_PATHS.some((p) => pathname.startsWith(p));
 
@@ -97,7 +110,7 @@ export function Layout() {
                 <polyline points="12 6 12 12 16 14" />
               </svg>
               Lịch sử
-              {txCount > 0 && <span className={styles.badgeCount}>{txCount}</span>}
+              {txUnread > 0 && <span className={styles.badgeCount}>{txUnread}</span>}
             </NavLink>
           </div>
 

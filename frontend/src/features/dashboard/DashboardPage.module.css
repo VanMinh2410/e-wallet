@@ -803,3 +803,60 @@
     border-radius: 3px;
   }
 }
+
+/* Eye Toggle Styles */
+.cardNumberRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-start;
+  margin-top: 12px;
+  font-size: 13.5px;
+  font-family: monospace;
+  letter-spacing: 1px;
+}
+
+.bankCardNumberRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: flex-start;
+}
+
+.eyeBtn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 150ms ease;
+  outline: none;
+}
+
+.eyeBtn:hover {
+  color: #FFFFFF;
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.eyeBtnLight {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 2px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 150ms ease;
+  outline: none;
+}
+
+.eyeBtnLight:hover {
+  color: #FFFFFF;
+  background-color: rgba(255, 255, 255, 0.2);
+}

@@ -75,6 +75,57 @@ export class TransactionsService implements OnModuleInit, OnModuleDestroy {
     if (result.modifiedCount > 0) {
       console.log(`Auto-expired ${result.modifiedCount} pending/processing deposit transactions.`);
     }
+
+    // Auto-refund pending withdrawals older than 5 minutes
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const pendingWithdrawals = await this.transactionModel.find({
+      type: TransactionType.WITHDRAW,
+      status: TransactionStatus.PENDING,
+      createdAt: { $lt: fiveMinutesAgo },
+    });
+
+    for (const tx of pendingWithdrawals) {
+      const session = await this.connection.startSession();
+      session.startTransaction();
+      try {
+        // Refund back to the user's wallet
+        await this.walletModel.findByIdAndUpdate(
+          tx.fromWalletId,
+          { $inc: { balance: tx.amount } },
+          { session }
+        );
+
+        tx.status = TransactionStatus.CANCELLED;
+        tx.description = 'Tự động hoàn tiền do quá thời gian xử lý (5 phút)';
+        await tx.save({ session });
+
+        await session.commitTransaction();
+
+        const wallet = await this.walletModel.findById(tx.fromWalletId);
+        this.notificationGateway.emitBalanceUpdated(tx.userId.toString(), wallet?.balance ?? 0);
+        
+        await this.notificationsService.create(
+          tx.userId.toString(),
+          'Rút tiền tự động hủy',
+          `Yêu cầu rút ${tx.amount.toLocaleString('vi-VN')}đ đã tự động hủy do quá 5 phút chưa được duyệt, tiền đã hoàn vào ví`,
+          'withdraw',
+        );
+
+        await this.auditModel.create({
+          userId: tx.userId,
+          action: 'WITHDRAW_AUTO_REFUND',
+          resource: 'transaction',
+          metadata: { transactionId: tx._id, amount: tx.amount },
+        });
+
+        console.log(`Auto-refunded expired withdrawal: ${tx.reference}`);
+      } catch (e) {
+        await session.abortTransaction();
+        console.error(`Failed to auto-expire withdrawal ${tx.reference}:`, e);
+      } finally {
+        session.endSession();
+      }
+    }
   }
 
   async getHistory(userId: string, page = 1, limit = 20, type?: string, status?: string) {
@@ -240,6 +291,19 @@ export class TransactionsService implements OnModuleInit, OnModuleDestroy {
       );
     }
 
+    const senderUser = await this.userModel.findById(userId);
+    if (!senderUser) {
+      throw new BusinessException('Người dùng không tồn tại', ErrorCodes.NOT_FOUND, HttpStatus.NOT_FOUND);
+    }
+    const limit = senderUser.transferLimit ?? 50_000_000;
+    if (dto.amount > limit) {
+      throw new BusinessException(
+        `Giao dịch vượt quá hạn mức chuyển tiền (Hạn mức hiện tại: ${limit.toLocaleString('vi-VN')}đ)`,
+        ErrorCodes.VALIDATION_ERROR,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
     await this.authService.assertTransactionOtp(userId, dto.amount, 500000, dto.otpCode);
 
     const wallet = await this.walletModel.findOne({ userId: new Types.ObjectId(userId), isActive: true });
@@ -251,21 +315,30 @@ export class TransactionsService implements OnModuleInit, OnModuleDestroy {
     }
 
     const bank = await this.bankService.resolveTransferAccount(userId, dto);
+    const recipientWallet = await this.walletModel.findOne({ userId: new Types.ObjectId(bank.userId), isActive: true });
+    if (!recipientWallet) {
+      throw new BusinessException('Ví người nhận không tồn tại', ErrorCodes.WALLET_NOT_FOUND, HttpStatus.NOT_FOUND);
+    }
+
     const reference = `BTX-${uuidv4()}`;
+    const recipientReference = `RXB-${uuidv4()}`;
     const session = await this.connection.startSession();
     session.startTransaction();
     try {
       await this.walletModel.findByIdAndUpdate(wallet._id, { $inc: { balance: -dto.amount } }, { session });
+      await this.walletModel.findByIdAndUpdate(recipientWallet._id, { $inc: { balance: dto.amount } }, { session });
+
       const [tx] = await this.transactionModel.create(
         [
           {
             reference,
             type: TransactionType.BANK_TRANSFER,
-            status: TransactionStatus.PROCESSING,
+            status: TransactionStatus.SUCCESS,
             userId: wallet.userId,
             fromWalletId: wallet._id,
+            toWalletId: recipientWallet._id,
             amount: dto.amount,
-            description: dto.description,
+            description: dto.description || `Chuyển khoản tới tài khoản ${bank.bankName} của ${bank.accountName}`,
             metadata: {
               bankCode: bank.bankCode,
               bankName: bank.bankName,
@@ -277,18 +350,69 @@ export class TransactionsService implements OnModuleInit, OnModuleDestroy {
         ],
         { session },
       );
+
+      const senderUser = await this.userModel.findById(userId);
+
+      const [txIn] = await this.transactionModel.create(
+        [
+          {
+            reference: recipientReference,
+            type: TransactionType.RECEIVE,
+            status: TransactionStatus.SUCCESS,
+            userId: new Types.ObjectId(bank.userId),
+            fromWalletId: wallet._id,
+            toWalletId: recipientWallet._id,
+            amount: dto.amount,
+            description: `Nhận tiền chuyển khoản ngân hàng ${bank.bankName} - ****${bank.accountNumber.slice(-4)} từ ${senderUser?.fullName || 'Người dùng'}`,
+            metadata: {
+              bankCode: bank.bankCode,
+              bankName: bank.bankName,
+              accountNumber: `****${bank.accountNumber.slice(-4)}`,
+              accountName: bank.accountName,
+              senderName: senderUser?.fullName,
+            },
+          },
+        ],
+        { session },
+      );
+
       await session.commitTransaction();
+
       const updated = await this.walletModel.findById(wallet._id);
+      const recipientUpdated = await this.walletModel.findById(recipientWallet._id);
+
       this.notificationGateway.emitBalanceUpdated(userId, updated?.balance ?? 0);
+      this.notificationGateway.emitBalanceUpdated(bank.userId, recipientUpdated?.balance ?? 0);
+
+      this.notificationGateway.emitTransactionCompleted(userId, {
+        transactionId: tx._id,
+        reference,
+        amount: dto.amount,
+        newBalance: updated?.balance,
+      });
+
+      this.notificationGateway.emitTransactionCompleted(bank.userId, {
+        transactionId: txIn._id,
+        reference: recipientReference,
+        amount: dto.amount,
+        newBalance: recipientUpdated?.balance,
+      });
+
       await this.notificationsService.create(
         userId,
-        'Chuyển ngân hàng đã gửi',
-        `Đang xử lý chuyển ${dto.amount.toLocaleString('vi-VN')}đ tới ${bank.bankName}`,
+        'Chuyển khoản ngân hàng thành công',
+        `Bạn đã chuyển thành công ${dto.amount.toLocaleString('vi-VN')}đ tới tài khoản ${bank.accountName} (${bank.bankName})`,
         'transfer',
       );
 
-      // Send email receipt
-      const senderUser = await this.userModel.findById(userId);
+      await this.notificationsService.create(
+        bank.userId,
+        'Nhận tiền chuyển khoản ngân hàng',
+        `Tài khoản ngân hàng liên kết ${bank.bankName} của bạn nhận được +${dto.amount.toLocaleString('vi-VN')}đ từ ${senderUser?.fullName || 'Người dùng'} (số dư ví đã được cộng tương ứng)`,
+        'transfer',
+      );
+
+      // Send email receipt to sender
       if (senderUser) {
         void this.mailerService.sendTransactionEmail({
           to: senderUser.email,
@@ -302,11 +426,26 @@ export class TransactionsService implements OnModuleInit, OnModuleDestroy {
         });
       }
 
+      // Send email receipt to receiver
+      const receiverUser = await this.userModel.findById(bank.userId);
+      if (receiverUser) {
+        void this.mailerService.sendTransactionEmail({
+          to: receiverUser.email,
+          type: 'transfer_in',
+          amount: dto.amount,
+          reference: recipientReference,
+          senderName: senderUser?.fullName || 'Người dùng',
+          description: `Nhận chuyển khoản ngân hàng vào tài khoản liên kết ${bank.bankName}`,
+          newBalance: recipientUpdated?.balance,
+          date: new Date(),
+        });
+      }
+
       return {
         transactionId: tx._id,
         reference,
         amount: dto.amount,
-        status: 'PROCESSING',
+        status: 'SUCCESS',
         bankName: bank.bankName,
         accountNumberMasked: `****${bank.accountNumber.slice(-4)}`,
         newBalance: updated?.balance,
@@ -432,7 +571,14 @@ export class TransactionsService implements OnModuleInit, OnModuleDestroy {
     return { message: approve ? 'Đã duyệt rút tiền' : 'Đã từ chối và hoàn tiền' };
   }
 
-  async qrPayment(userId: string, walletId: string, qrData: string, amount?: number, otpCode?: string) {
+  async qrPayment(
+    userId: string,
+    walletId: string,
+    qrData: string,
+    amount?: number,
+    otpCode?: string,
+    description?: string,
+  ) {
     // Check bank account constraint
     const hasBankAccount = await this.bankService.hasActiveBankAccount(userId);
     if (!hasBankAccount) {
@@ -447,6 +593,19 @@ export class TransactionsService implements OnModuleInit, OnModuleDestroy {
     const payAmount = amount ?? parsed.amount;
     if (!payAmount || payAmount < 1000) {
       throw new BusinessException('Số tiền không hợp lệ', ErrorCodes.VALIDATION_ERROR);
+    }
+
+    const senderUserInfo = await this.userModel.findById(userId);
+    if (!senderUserInfo) {
+      throw new BusinessException('Không tìm thấy người gửi', ErrorCodes.NOT_FOUND, HttpStatus.NOT_FOUND);
+    }
+    const limit = senderUserInfo.transferLimit ?? 50_000_000;
+    if (payAmount > limit) {
+      throw new BusinessException(
+        `Giao dịch vượt quá hạn mức thanh toán (Hạn mức hiện tại: ${limit.toLocaleString('vi-VN')}đ)`,
+        ErrorCodes.VALIDATION_ERROR,
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const fromWallet = await this.walletModel.findOne({ _id: walletId, userId: new Types.ObjectId(userId) });
@@ -471,11 +630,13 @@ export class TransactionsService implements OnModuleInit, OnModuleDestroy {
     await this.authService.assertTransactionOtp(userId, payAmount, 500000, otpCode);
 
     const reference = `QR-${uuidv4()}`;
+    const recipientReference = `RXQ-${uuidv4()}`;
     const session = await this.connection.startSession();
     session.startTransaction();
     try {
       await this.walletModel.findByIdAndUpdate(fromWallet._id, { $inc: { balance: -payAmount } }, { session });
       await this.walletModel.findByIdAndUpdate(toWallet._id, { $inc: { balance: payAmount } }, { session });
+
       const [tx] = await this.transactionModel.create(
         [
           {
@@ -486,18 +647,50 @@ export class TransactionsService implements OnModuleInit, OnModuleDestroy {
             fromWalletId: fromWallet._id,
             toWalletId: toWallet._id,
             amount: payAmount,
+            description: description || `Thanh toán QR tới ${recipient.fullName}`,
             metadata: { qrMerchant: parsed.merchantEmail },
           },
         ],
         { session },
       );
+
+      const [txIn] = await this.transactionModel.create(
+        [
+          {
+            reference: recipientReference,
+            type: TransactionType.RECEIVE,
+            status: TransactionStatus.SUCCESS,
+            userId: recipient._id,
+            fromWalletId: fromWallet._id,
+            toWalletId: toWallet._id,
+            amount: payAmount,
+            description: description || `Nhận tiền QR từ ${senderUserInfo.fullName}`,
+            metadata: { senderEmail: senderUserInfo.email, senderName: senderUserInfo.fullName },
+          },
+        ],
+        { session },
+      );
+
       await session.commitTransaction();
       const updated = await this.walletModel.findById(fromWallet._id);
       const recipientUpdated = await this.walletModel.findById(toWallet._id);
-      
+
       this.notificationGateway.emitBalanceUpdated(userId, updated?.balance ?? 0);
       this.notificationGateway.emitBalanceUpdated(recipient._id.toString(), recipientUpdated?.balance ?? 0);
-      
+
+      this.notificationGateway.emitTransactionCompleted(userId, {
+        transactionId: tx._id,
+        reference,
+        amount: payAmount,
+        newBalance: updated?.balance,
+      });
+      this.notificationGateway.emitTransactionCompleted(recipient._id.toString(), {
+        transactionId: txIn._id,
+        reference: txIn.reference,
+        amount: payAmount,
+        newBalance: recipientUpdated?.balance,
+      });
+
       await this.notificationsService.create(
         userId,
         'Thanh toán QR thành công',
@@ -507,31 +700,28 @@ export class TransactionsService implements OnModuleInit, OnModuleDestroy {
       await this.notificationsService.create(
         recipient._id.toString(),
         'Nhận tiền từ QR',
-        `Bạn nhận được ${payAmount.toLocaleString('vi-VN')}đ thanh toán`,
+        `Bạn nhận được ${payAmount.toLocaleString('vi-VN')}đ từ QR của ${senderUserInfo.fullName}`,
         'transfer',
       );
 
       // Send email receipts
-      const senderUserInfo = await this.userModel.findById(userId);
-      if (senderUserInfo) {
-        void this.mailerService.sendTransactionEmail({
-          to: senderUserInfo.email,
-          type: 'qr_payment',
-          amount: payAmount,
-          reference,
-          recipientName: recipient.fullName,
-          recipientEmail: recipient.email,
-          newBalance: updated?.balance,
-          date: new Date(),
-        });
-      }
+      void this.mailerService.sendTransactionEmail({
+        to: senderUserInfo.email,
+        type: 'qr_payment',
+        amount: payAmount,
+        reference,
+        recipientName: recipient.fullName,
+        recipientEmail: recipient.email,
+        newBalance: updated?.balance,
+        date: new Date(),
+      });
       void this.mailerService.sendTransactionEmail({
         to: recipient.email,
         type: 'transfer_in',
         amount: payAmount,
         reference,
-        senderName: senderUserInfo?.fullName,
-        senderEmail: senderUserInfo?.email,
+        senderName: senderUserInfo.fullName,
+        senderEmail: senderUserInfo.email,
         newBalance: recipientUpdated?.balance,
         date: new Date(),
       });

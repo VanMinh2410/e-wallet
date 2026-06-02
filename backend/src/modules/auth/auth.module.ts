@@ -7,6 +7,7 @@ import { User, UserSchema } from '../users/schemas/user.schema';
 import { Wallet, WalletSchema } from '../wallets/schemas/wallet.schema';
 import { OtpRecord, OtpRecordSchema } from './schemas/otp-record.schema';
 import { BankAccount, BankAccountSchema } from '../bank/schemas/bank-account.schema';
+import { AuditLog, AuditLogSchema } from '../../common/schemas/audit-log.schema';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
@@ -19,6 +20,7 @@ import { LocalStrategy } from './strategies/local.strategy';
       { name: Wallet.name, schema: WalletSchema },
       { name: OtpRecord.name, schema: OtpRecordSchema },
       { name: BankAccount.name, schema: BankAccountSchema },
+      { name: AuditLog.name, schema: AuditLogSchema },
     ]),
     PassportModule,
     JwtModule.registerAsync({

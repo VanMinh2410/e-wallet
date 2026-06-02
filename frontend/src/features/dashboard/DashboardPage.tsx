@@ -12,6 +12,7 @@ interface LinkedBankAccount {
   bankCode: string;
   bankName: string;
   accountNumber: string;
+  accountNumberMasked: string;
   isVerified: boolean;
 }
 
@@ -36,6 +37,11 @@ export function DashboardPage() {
   }
 
   const [balance, setBalance] = useState<number | null>(null);
+  const [showCardNumbers, setShowCardNumbers] = useState<Record<string, boolean>>({});
+
+  const toggleCardVisibility = (id: string) => {
+    setShowCardNumbers((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
 
   const { data: wallet } = useQuery({
     queryKey: ['wallet'],
@@ -195,7 +201,14 @@ export function DashboardPage() {
   const { income: totalIncomeThisMonth, expense: totalExpenseThisMonth } = getMonthlyStats();
 
   const getChartData = () => {
-    const months = [];
+    interface ChartMonth {
+      month: string;
+      year: number;
+      monthNum: number;
+      rawThu: number;
+      rawChi: number;
+    }
+    const months: ChartMonth[] = [];
     const now = new Date();
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -355,8 +368,34 @@ export function DashboardPage() {
               <span className={styles.trendArrow}>▲</span>
               <span>+0 đ tháng này</span>
             </div>
-            <div className={styles.cardNumber}>
-              **** **** **** {bankAccounts?.[0]?.accountNumber?.slice(-4) || '4821'}
+            <div className={styles.cardNumberRow}>
+              <span>
+                {bankAccounts?.[0]
+                  ? (showCardNumbers[bankAccounts[0].id]
+                      ? bankAccounts[0].accountNumber.replace(/(\d{4})/g, '$1 ').trim()
+                      : bankAccounts[0].accountNumberMasked)
+                  : '**** **** **** 4821'}
+              </span>
+              {bankAccounts?.[0] && (
+                <button
+                  type="button"
+                  className={styles.eyeBtn}
+                  onClick={() => toggleCardVisibility(bankAccounts[0].id)}
+                  aria-label="Hiển thị số thẻ"
+                >
+                  {showCardNumbers[bankAccounts[0].id] ? (
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                      <line x1="1" y1="1" x2="23" y2="23" />
+                    </svg>
+                  ) : (
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </header>
@@ -424,7 +463,35 @@ export function DashboardPage() {
                   <span className={styles.bankCardBrand}>VISA</span>
                 </div>
                 <div>
-                  <div className={styles.bankCardMask}>**** {bankAccounts?.[0]?.accountNumber?.slice(-4) || '4821'}</div>
+                  <div className={styles.bankCardNumberRow}>
+                    <span className={styles.bankCardMask}>
+                      {bankAccounts?.[0]
+                        ? (showCardNumbers[bankAccounts[0].id]
+                            ? bankAccounts[0].accountNumber.replace(/(\d{4})/g, '$1 ').trim()
+                            : bankAccounts[0].accountNumberMasked)
+                        : '**** 4821'}
+                    </span>
+                    {bankAccounts?.[0] && (
+                      <button
+                        type="button"
+                        className={styles.eyeBtnLight}
+                        onClick={() => toggleCardVisibility(bankAccounts[0].id)}
+                        aria-label="Hiển thị số thẻ"
+                      >
+                        {showCardNumbers[bankAccounts[0].id] ? (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                            <line x1="1" y1="1" x2="23" y2="23" />
+                          </svg>
+                        ) : (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        )}
+                      </button>
+                    )}
+                  </div>
                   <div className={styles.bankCardBalance}>{displayBalance.toLocaleString('vi-VN')} đ</div>
                 </div>
               </div>
@@ -435,7 +502,35 @@ export function DashboardPage() {
                   <span className={styles.bankCardBrand}>MC</span>
                 </div>
                 <div>
-                  <div className={styles.bankCardMask}>**** {bankAccounts?.[1]?.accountNumber?.slice(-4) || '7239'}</div>
+                  <div className={styles.bankCardNumberRow}>
+                    <span className={styles.bankCardMask}>
+                      {bankAccounts?.[1]
+                        ? (showCardNumbers[bankAccounts[1].id]
+                            ? bankAccounts[1].accountNumber.replace(/(\d{4})/g, '$1 ').trim()
+                            : bankAccounts[1].accountNumberMasked)
+                        : '**** 7239'}
+                    </span>
+                    {bankAccounts?.[1] && (
+                      <button
+                        type="button"
+                        className={styles.eyeBtnLight}
+                        onClick={() => toggleCardVisibility(bankAccounts[1].id)}
+                        aria-label="Hiển thị số thẻ"
+                      >
+                        {showCardNumbers[bankAccounts[1].id] ? (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                            <line x1="1" y1="1" x2="23" y2="23" />
+                          </svg>
+                        ) : (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        )}
+                      </button>
+                    )}
+                  </div>
                   <div className={styles.bankCardBalance}>0 đ</div>
                 </div>
               </div>
@@ -742,7 +837,33 @@ export function DashboardPage() {
                     <span className={styles.cardBoxBrand}>VISA</span>
                   </div>
                   <div className={styles.cardBoxMiddle}>
-                    **** **** **** {bankAccounts?.[0]?.accountNumber?.slice(-4) || '4821'}
+                    <span>
+                      {bankAccounts?.[0]
+                        ? (showCardNumbers[bankAccounts[0].id]
+                            ? bankAccounts[0].accountNumber.replace(/(\d{4})/g, '$1 ').trim()
+                            : bankAccounts[0].accountNumberMasked)
+                        : '**** **** **** 4821'}
+                    </span>
+                    {bankAccounts?.[0] && (
+                      <button
+                        type="button"
+                        className={styles.eyeBtn}
+                        onClick={() => toggleCardVisibility(bankAccounts[0].id)}
+                        aria-label="Hiển thị số thẻ"
+                      >
+                        {showCardNumbers[bankAccounts[0].id] ? (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                            <line x1="1" y1="1" x2="23" y2="23" />
+                          </svg>
+                        ) : (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        )}
+                      </button>
+                    )}
                   </div>
                   <div className={styles.cardBoxAmountRow}>
                     <span className={styles.cardBoxBalance}>{displayBalance.toLocaleString('vi-VN')} đ</span>
@@ -760,7 +881,33 @@ export function DashboardPage() {
                     <span className={styles.cardBoxBrand}>MC</span>
                   </div>
                   <div className={styles.cardBoxMiddle}>
-                    **** **** **** {bankAccounts?.[1]?.accountNumber?.slice(-4) || '7239'}
+                    <span>
+                      {bankAccounts?.[1]
+                        ? (showCardNumbers[bankAccounts[1].id]
+                            ? bankAccounts[1].accountNumber.replace(/(\d{4})/g, '$1 ').trim()
+                            : bankAccounts[1].accountNumberMasked)
+                        : '**** **** **** 7239'}
+                    </span>
+                    {bankAccounts?.[1] && (
+                      <button
+                        type="button"
+                        className={styles.eyeBtn}
+                        onClick={() => toggleCardVisibility(bankAccounts[1].id)}
+                        aria-label="Hiển thị số thẻ"
+                      >
+                        {showCardNumbers[bankAccounts[1].id] ? (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                            <line x1="1" y1="1" x2="23" y2="23" />
+                          </svg>
+                        ) : (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        )}
+                      </button>
+                    )}
                   </div>
                   <div className={styles.cardBoxAmountRow}>
                     <span className={styles.cardBoxBalance}>0 đ</span>

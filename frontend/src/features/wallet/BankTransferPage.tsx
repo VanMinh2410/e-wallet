@@ -16,7 +16,7 @@ const QUICK_AMOUNTS = [500_000, 1_000_000, 2_000_000, 5_000_000];
 const TRANSFER_FEE = 0; // free
 
 type TransferType = 'domestic' | 'international';
-type AccountMode = 'new' | 'saved';
+
 
 type Step =
   | 'type'       // 1. Chọn loại CK
@@ -27,7 +27,6 @@ type Step =
   | 'result';    // 6. Kết quả
 
 interface BankCatalogItem { code: string; name: string; shortName: string; }
-interface LinkedBank { id: string; bankCode: string; bankName: string; accountName: string; accountNumberMasked: string; }
 
 const BANK_COLORS: Record<string, string> = {
   VCB: '#1565C0', TCB: '#B71C1C', BIDV: '#1B5E20', VTB: '#E65100',
@@ -57,7 +56,6 @@ export function BankTransferPage() {
   // ── Global state ──────────────────────────────────────────────────────
   const [step, setStep] = useState<Step>('type');
   const [transferType, setTransferType] = useState<TransferType>('domestic');
-  const [accountMode, setAccountMode] = useState<AccountMode>('saved');
   const [bankSearch, setBankSearch] = useState('');
 
   // Bank selection
@@ -70,9 +68,6 @@ export function BankTransferPage() {
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupError, setLookupError] = useState('');
 
-  // Saved account selection
-  const [savedAccountId, setSavedAccountId] = useState('');
-  const [savedAccount, setSavedAccount] = useState<LinkedBank | null>(null);
 
   // Amount
   const [amount, setAmount] = useState('');
@@ -104,10 +99,6 @@ export function BankTransferPage() {
     staleTime: Infinity,
   });
 
-  const { data: savedBanks = [] } = useQuery<LinkedBank[]>({
-    queryKey: ['banks'],
-    queryFn: async () => unwrap<LinkedBank[]>(await api.get('/bank-accounts')),
-  });
 
   // ── Derived ──────────────────────────────────────────────────────────
   const numAmount = Number(amount) || 0;
@@ -118,13 +109,11 @@ export function BankTransferPage() {
     return !q || b.shortName.toLowerCase().includes(q) || b.code.toLowerCase().includes(q) || b.name.toLowerCase().includes(q);
   });
 
-  const resolvedName = accountMode === 'saved' ? savedAccount?.accountName : accountHolder;
-  const resolvedBank = accountMode === 'saved' ? savedAccount?.bankName : selectedBank?.shortName;
-  const resolvedSTK  = accountMode === 'saved' ? savedAccount?.accountNumberMasked : `****${accountNumber.slice(-4)}`;
+  const resolvedName = accountHolder;
+  const resolvedBank = selectedBank?.shortName;
+  const resolvedSTK  = accountNumber ? `****${accountNumber.slice(-4)}` : '';
 
-  const canGoToAmount =
-    (accountMode === 'saved' && !!savedAccountId) ||
-    (accountMode === 'new'   && !!selectedBank && !!accountHolder && !lookupError);
+  const canGoToAmount = !!selectedBank && !!accountHolder && !lookupError;
 
   const canConfirm = numAmount >= 1000 && numAmount <= DAILY_LIMIT && (wallet?.balance ?? 0) >= numAmount;
 
@@ -195,9 +184,7 @@ export function BankTransferPage() {
     setSubmitting(true);
     setOtpAttempts((a) => a + 1);
     try {
-      const payload = accountMode === 'saved'
-        ? { bankAccountId: savedAccountId, amount: numAmount, description, otpCode }
-        : { bankCode: selectedBank!.code, bankName: selectedBank!.shortName, accountNumber, accountName: accountHolder, amount: numAmount, description, otpCode };
+      const payload = { bankCode: selectedBank!.code, bankName: selectedBank!.shortName, accountNumber, accountName: accountHolder, amount: numAmount, description, otpCode };
 
       const res = await api.post('/transactions/bank-transfer', payload);
       const data = unwrap<{ reference: string }>(res);
@@ -232,10 +219,7 @@ export function BankTransferPage() {
   // ── Helpers ───────────────────────────────────────────────────────────
   const selectQuick = (a: number) => { setAmount(String(a)); setQuickActive(a); };
 
-  const selectSavedAccount = (b: LinkedBank) => {
-    setSavedAccountId(b.id);
-    setSavedAccount(b);
-  };
+
 
   const selectBankFromGrid = (b: BankCatalogItem) => {
     setSelectedBank(b);
@@ -377,66 +361,25 @@ export function BankTransferPage() {
                 <span className={styles.cardHeaderTitle}>Chọn ngân hàng & tài khoản đích</span>
               </div>
               <div className={styles.cardBody}>
-                {/* Mode toggle */}
-                <div className={styles.savedToggle}>
-                  <button
-                    type="button"
-                    className={`${styles.savedToggleBtn} ${accountMode === 'saved' ? styles.savedToggleBtnActive : ''}`}
-                    onClick={() => setAccountMode('saved')}
-                  >
-                    📂 Từ danh sách đã lưu
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.savedToggleBtn} ${accountMode === 'new' ? styles.savedToggleBtnActive : ''}`}
-                    onClick={() => { setAccountMode('new'); setSavedAccountId(''); setSavedAccount(null); }}
-                  >
-                    ✏️ Nhập tài khoản mới
-                  </button>
+                {/* Notice: only enter OTHER person's account */}
+                <div style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 10,
+                  padding: '12px 14px',
+                  background: '#FFF7ED', borderRadius: 12,
+                  border: '1.5px solid #FED7AA',
+                  fontSize: 12.5, color: '#92400E', lineHeight: 1.6,
+                  fontWeight: 500
+                }}>
+                  <span style={{ fontSize: 18, flexShrink: 0 }}>ℹ️</span>
+                  <span>
+                    Chức năng này dùng để chuyển tiền <strong>sang tài khoản ngân hàng của người khác</strong>.
+                    Bạn không thể chuyển vào tài khoản ngân hàng của chính mình.
+                  </span>
                 </div>
 
-                {/* ── Saved accounts ── */}
-                {accountMode === 'saved' && (
-                  <>
-                    {savedBanks.length === 0 ? (
-                      <div style={{ textAlign: 'center', padding: '24px', color: '#94A3B8' }}>
-                        <div style={{ fontSize: 32, marginBottom: 8 }}>🏦</div>
-                        <p style={{ fontSize: 13, fontWeight: 600, margin: 0 }}>Chưa có tài khoản đã lưu</p>
-                        <button
-                          type="button"
-                          style={{ marginTop: 12, fontSize: 13, color: '#0C447C', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' }}
-                          onClick={() => setAccountMode('new')}
-                        >
-                          + Nhập tài khoản mới
-                        </button>
-                      </div>
-                    ) : (
-                      <div className={styles.savedList}>
-                        {savedBanks.map((b) => (
-                          <button
-                            key={b.id}
-                            type="button"
-                            className={`${styles.savedItem} ${savedAccountId === b.id ? styles.savedItemActive : ''}`}
-                            onClick={() => selectSavedAccount(b)}
-                          >
-                            <div className={styles.savedItemLogo} style={{ background: bankColor(b.bankCode) }}>
-                              {b.bankCode.slice(0, 3)}
-                            </div>
-                            <div className={styles.savedItemInfo}>
-                              <div className={styles.savedItemName}>{b.accountName}</div>
-                              <div className={styles.savedItemNum}>{b.accountNumberMasked} · {b.bankName}</div>
-                            </div>
-                            {savedAccountId === b.id && <div className={styles.savedItemCheck}>✓</div>}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                )}
 
                 {/* ── New account entry ── */}
-                {accountMode === 'new' && (
-                  <>
+                <>
                     {/* Bank selector */}
                     <div>
                       <div className={styles.fieldLabel}>Chọn ngân hàng</div>
@@ -533,7 +476,6 @@ export function BankTransferPage() {
                       </div>
                     )}
                   </>
-                )}
 
                 <div className={styles.btnRow}>
                   <button type="button" className={styles.ghostBtn} onClick={goPrev}>← Quay lại</button>
@@ -551,7 +493,7 @@ export function BankTransferPage() {
           </div>
 
           <div className={styles.sidePanel}>
-            {(savedAccount || accountHolder) && (
+            {accountHolder && (
               <div className={styles.summaryCard}>
                 <div className={styles.summaryHeader}>👤 Thông tin tài khoản đích</div>
                 <div className={styles.summaryBody}>

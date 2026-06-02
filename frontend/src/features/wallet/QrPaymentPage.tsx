@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import api, { unwrap } from '../../shared/services/api';
 import { useToast } from '../../shared/context/ToastContext';
@@ -17,18 +17,19 @@ interface LinkedBankAccount {
   id: string;
   bankCode: string;
   bankName: string;
-  accountNumber: string;
+  accountNumberMasked: string;
   isVerified: boolean;
 }
 
 export function QrPaymentPage() {
   const authUser = useAppSelector((s) => s.auth.user);
+
   if (authUser?.role === 'admin') {
     return <Navigate to="/admin" replace />;
   }
 
   const [tab, setTab] = useState<'receive' | 'pay'>('receive');
-  
+
   // States for Pay QR
   const [qrData, setQrData] = useState('');
   const [qrDataRaw, setQrDataRaw] = useState('');
@@ -39,6 +40,8 @@ export function QrPaymentPage() {
   const [paidRef, setPaidRef] = useState('');
   const [otpOpen, setOtpOpen] = useState(false);
   const [recipientEmail, setRecipientEmail] = useState('');
+  const [recipientNameResolved, setRecipientNameResolved] = useState('');
+  const [description, setDescription] = useState('');
   const [qrAmountVal, setQrAmountVal] = useState<number | null>(null);
 
   // States for Receive/Generate QR
@@ -57,7 +60,7 @@ export function QrPaymentPage() {
     queryFn: async () => unwrap<{ id: string; balance: number }>(await api.get('/wallets')),
   });
 
-  const { data: bankAccounts } = useQuery({
+  const { data: bankAccounts, isLoading: isBankAccountsLoading } = useQuery({
     queryKey: ['user-bank-accounts'],
     queryFn: async () => unwrap<LinkedBankAccount[]>(await api.get('/bank-accounts')),
   });
@@ -101,10 +104,18 @@ export function QrPaymentPage() {
     toast('Đã xóa số tiền nhận QR', 'info');
   };
 
+  const [validationError, setValidationError] = useState('');
+
   const extractBase64 = (input: string): string => {
-    const trimmed = input.trim();
+    let trimmed = input.trim();
     if (!trimmed) return '';
-    
+
+    try {
+      trimmed = decodeURIComponent(trimmed);
+    } catch {
+      // Ignore URL component decoding error, fallback to raw input
+    }
+
     if (trimmed.includes('?data=')) {
       const parts = trimmed.split('?data=');
       if (parts[1]) {
@@ -119,15 +130,57 @@ export function QrPaymentPage() {
     return trimmed;
   };
 
-  const decodeQrPayload = (extracted: string) => {
+  const safeAtob = (str: string): string => {
+    // Convert URL-safe base64 to standard base64
+    let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+    // Add missing padding
+    while (base64.length % 4) {
+      base64 += '=';
+    }
+    return atob(base64);
+  };
+
+  const resolveRecipientName = async (email: string) => {
+    if (!email) {
+      setRecipientNameResolved('');
+      return;
+    }
     try {
-      const decoded = JSON.parse(atob(extracted));
+      const res = await api.post('/wallets/resolve-recipient', { recipient: email });
+      const data = unwrap<{ fullName: string; email: string }>(res);
+      setRecipientNameResolved(data?.fullName || '');
+    } catch {
+      setRecipientNameResolved('');
+    }
+  };
+
+  const decodeQrPayload = (extracted: string) => {
+    if (!extracted) {
+      setRecipientEmail('');
+      setRecipientNameResolved('');
+      setQrAmountVal(null);
+      setValidationError('');
+      return;
+    }
+
+    try {
+      const decoded = JSON.parse(safeAtob(extracted));
+      if (!decoded.payload) {
+        throw new Error('Payload missing');
+      }
       const inner = JSON.parse(decoded.payload);
-      if (inner.merchantEmail) {
-        setRecipientEmail(inner.merchantEmail);
+      const email = inner.merchantEmail || inner.email;
+
+      if (email) {
+        setRecipientEmail(email);
+        void resolveRecipientName(email);
+        setValidationError('');
       } else {
         setRecipientEmail('');
+        setRecipientNameResolved('');
+        setValidationError('Mã QR không chứa thông tin tài khoản nhận.');
       }
+
       if (inner.amount) {
         setQrAmountVal(Number(inner.amount));
         setPayAmount(String(inner.amount));
@@ -137,7 +190,9 @@ export function QrPaymentPage() {
       }
     } catch {
       setRecipientEmail('');
+      setRecipientNameResolved('');
       setQrAmountVal(null);
+      setValidationError('Mã QR không hợp lệ hoặc sai định dạng. Vui lòng quét mã QR thanh toán của ví VBANK.');
     }
   };
 
@@ -150,7 +205,7 @@ export function QrPaymentPage() {
 
   const getQrAmount = (rawQr: string): number => {
     try {
-      const decoded = JSON.parse(atob(rawQr));
+      const decoded = JSON.parse(safeAtob(rawQr));
       const inner = JSON.parse(decoded.payload);
       return Number(inner.amount) || 0;
     } catch {
@@ -167,6 +222,11 @@ export function QrPaymentPage() {
     const qrAmount = getQrAmount(qrData.trim());
     const finalAmount = Number(payAmount) || qrAmount;
 
+    if (!finalAmount || isNaN(finalAmount) || finalAmount < 1000) {
+      toast('Số tiền giao dịch không hợp lệ (tối thiểu 1.000 đ)', 'error');
+      return;
+    }
+
     if (finalAmount >= 500_000 && !otpCode) {
       setOtpOpen(true);
       return;
@@ -179,12 +239,14 @@ export function QrPaymentPage() {
         qrData: qrData.trim(),
         amount: payAmount ? Number(payAmount) : undefined,
         otpCode,
+        description: description.trim() || undefined,
       });
       const data = unwrap<{ newBalance: number; reference: string; amount: number }>(res);
-      setPaidAmount(data.amount);
+      setPaidAmount(data.amount || finalAmount);
       setPaidRef(data.reference);
       setPaySuccess(true);
       qc.invalidateQueries({ queryKey: ['wallet'] });
+      qc.invalidateQueries({ queryKey: ['transactions-all'] });
       toast(`Thanh toán thành công! Số dư: ${formatCurrency(data.newBalance)}`, 'success');
     } catch (err: unknown) {
       toast(getApiErrorMessage(err, 'QR không hợp lệ'), 'error');
@@ -193,10 +255,51 @@ export function QrPaymentPage() {
     }
   };
 
+  const handleCopyText = async (text: string, successMessage: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast(successMessage, 'success');
+    } catch {
+      toast('Không thể sao chép văn bản', 'error');
+    }
+  };
+
   const downloadQr = () => {
     const svg = qrRef.current?.querySelector('svg');
     if (!svg || !generatedQr) return;
-    const svgData = new XMLSerializer().serializeToString(svg);
+
+    try {
+      const svgData = new XMLSerializer().serializeToString(svg);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas context not available');
+
+      const img = new Image();
+      img.onload = () => {
+        canvas.width = img.width * 2; // scale for high quality
+        canvas.height = img.height * 2;
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        const pngUrl = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = pngUrl;
+        a.download = 'vbank-qr.png';
+        a.click();
+        toast('Đã tải hình ảnh QR xuống máy', 'success');
+      };
+      img.onerror = () => {
+        fallbackSvgDownload(svgData);
+      };
+      img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+    } catch {
+      const svgData = new XMLSerializer().serializeToString(svg);
+      fallbackSvgDownload(svgData);
+    }
+  };
+
+  const fallbackSvgDownload = (svgData: string) => {
     const blob = new Blob([svgData], { type: 'image/svg+xml' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -204,7 +307,7 @@ export function QrPaymentPage() {
     a.download = 'vbank-qr.svg';
     a.click();
     URL.revokeObjectURL(url);
-    toast('Đã tải hình ảnh QR xuống máy', 'success');
+    toast('Đã tải hình ảnh QR (SVG) xuống máy', 'success');
   };
 
   const shareQrText = async () => {
@@ -221,8 +324,30 @@ export function QrPaymentPage() {
     window.print();
   };
 
-  const linkedBankText = bankAccounts?.[0] 
-    ? `${bankAccounts[0].bankName} - ${bankAccounts[0].accountNumber}` 
+  // Blocker warning if no bank account is linked
+  const hasNoBank = !isBankAccountsLoading && bankAccounts && bankAccounts.length === 0;
+  if (hasNoBank) {
+    return (
+      <div className={styles.container}>
+        <AppHeader variant="sub" title="QR Thanh toán" showBack={true} backTo="/dashboard" />
+        <div className={styles.paddingWrapper}>
+          <div className={styles.warningBlocker}>
+            <div className={styles.warningIcon}>⚠️</div>
+            <h3 className={styles.warningTitle}>Yêu cầu liên kết ngân hàng</h3>
+            <p className={styles.warningText}>
+              Bạn cần liên kết ít nhất một tài khoản ngân hàng trước khi thực hiện thanh toán hoặc tạo mã QR nhận tiền.
+            </p>
+            <Link to="/profile" className={styles.warningAction}>
+              Liên kết ngân hàng ngay
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const linkedBankText = bankAccounts?.[0]
+    ? `${bankAccounts[0].bankName} - ${bankAccounts[0].accountNumberMasked}`
     : 'Vietcombank - 0123456789';
 
   return (
@@ -240,7 +365,15 @@ export function QrPaymentPage() {
               setPaySuccess(false);
             }}
           >
-            Mã QR của tôi
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <rect x="3" y="3" width="7" height="7" />
+                <rect x="14" y="3" width="7" height="7" />
+                <rect x="14" y="14" width="7" height="7" />
+                <rect x="3" y="14" width="7" height="7" />
+              </svg>
+              Mã QR của tôi
+            </span>
           </button>
           <button
             type="button"
@@ -250,7 +383,16 @@ export function QrPaymentPage() {
               setPaySuccess(false);
             }}
           >
-            Quét QR
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M3 7V5a2 2 0 0 1 2-2h2" />
+                <path d="M17 3h2a2 2 0 0 1 2 2v2" />
+                <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
+                <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+                <line x1="7" y1="12" x2="17" y2="12" />
+              </svg>
+              Quét mã QR
+            </span>
           </button>
         </div>
 
@@ -337,13 +479,56 @@ export function QrPaymentPage() {
                   <div className={styles.gridIconBox}>
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <polyline points="6 9 6 2 18 2 18 9" />
-                      <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                      <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2 2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
                       <rect x="6" y="14" width="12" height="8" />
                     </svg>
                   </div>
                   <span className={styles.gridLabel}>In QR</span>
                 </div>
               </div>
+
+              {/* QR Code and Payment Link Copy Area */}
+              {generatedQr && (
+                <div className={styles.qrInfoCard}>
+                  <div className={styles.qrInfoField}>
+                    <label className={styles.qrInfoLabel}>ĐƯỜNG DẪN THANH TOÁN (LINK QR)</label>
+                    <div className={styles.copyWrapper}>
+                      <input
+                        type="text"
+                        readOnly
+                        value={generatedQr.startsWith('http') ? generatedQr : `${window.location.origin}/qr-payment?data=${generatedQr}`}
+                        className={styles.copyInput}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleCopyText(generatedQr.startsWith('http') ? generatedQr : `${window.location.origin}/qr-payment?data=${generatedQr}`, 'Đã sao chép đường dẫn thanh toán')}
+                        className={styles.copyButton}
+                      >
+                        Sao chép
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className={styles.qrInfoField} style={{ marginTop: 14 }}>
+                    <label className={styles.qrInfoLabel}>MÃ QR (BASE64 TEXT)</label>
+                    <div className={styles.copyWrapper}>
+                      <input
+                        type="text"
+                        readOnly
+                        value={generatedQr}
+                        className={styles.copyInput}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleCopyText(generatedQr, 'Đã sao chép mã QR')}
+                        className={styles.copyButton}
+                      >
+                        Sao chép
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -374,20 +559,27 @@ export function QrPaymentPage() {
             </div>
 
             <div className={styles.sidebarColumn}>
-              <p className={styles.balanceText}>
-                Số dư khả dụng: <strong>{formatCurrency(wallet?.balance ?? 24580000)} đ</strong>
-              </p>
+              {/* SỐ DƯ KHẢ DỤNG Pill */}
+              <div className={styles.balancePill}>
+                <span className={styles.balanceLabel}>SỐ DƯ KHẢ DỤNG</span>
+                <span className={styles.balanceValue}>{formatCurrency(wallet?.balance ?? 0)} đ</span>
+              </div>
 
               {/* Paste Data Input */}
-              <div className={styles.inputGroup}>
-                <label>Nhập mã QR hoặc Link thanh toán</label>
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>NHẬP MÃ QR HOẶC LINK THANH TOÁN</label>
                 <input
                   type="text"
-                  className={styles.textInput}
+                  className={styles.formInput}
                   value={qrDataRaw}
                   onChange={(e) => handleQrCodeChange(e.target.value)}
                   placeholder="Dán mã QR hoặc link có ?data=..."
                 />
+                {validationError && (
+                  <p className={styles.errorText}>
+                    {validationError}
+                  </p>
+                )}
               </div>
 
               {/* Transaction Preview Info Card */}
@@ -396,7 +588,9 @@ export function QrPaymentPage() {
                   <div className={styles.previewHeader}>Thông tin giao dịch</div>
                   <div className={styles.previewRow}>
                     <span className={styles.previewRowLabel}>Người nhận</span>
-                    <span className={styles.previewRowValue}>{recipientEmail}</span>
+                    <span className={styles.previewRowValue}>
+                      {recipientNameResolved ? `${recipientNameResolved} (${recipientEmail})` : recipientEmail}
+                    </span>
                   </div>
                   {qrAmountVal !== null && (
                     <div className={styles.previewRow}>
@@ -411,14 +605,28 @@ export function QrPaymentPage() {
 
               {/* Editable Amount Input if not set in QR */}
               {qrAmountVal === null && qrData.trim() !== '' && (
-                <div className={styles.inputGroup}>
-                  <label>Nhập số tiền chuyển khoản (VND)</label>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>SỐ TIỀN (TÙY CHỌN)</label>
                   <input
                     type="number"
-                    className={styles.textInput}
+                    className={styles.formInput}
                     value={payAmount}
                     onChange={(e) => setPayAmount(e.target.value)}
-                    placeholder="Nhập số tiền giao dịch..."
+                    placeholder="Nhập số tiền..."
+                  />
+                </div>
+              )}
+
+              {/* Editable Description input if recipient is set */}
+              {recipientEmail && (
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>LỜI NHẮN CHUYỂN TIỀN (TÙY CHỌN)</label>
+                  <input
+                    type="text"
+                    className={styles.formInput}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Nhập nội dung thanh toán..."
                   />
                 </div>
               )}
@@ -448,8 +656,16 @@ export function QrPaymentPage() {
               </div>
               <div className={styles.receiptRow}>
                 <span className={styles.receiptLabel}>Người nhận</span>
-                <span className={styles.receiptValue}>{recipientEmail || 'Hệ thống đối tác'}</span>
+                <span className={styles.receiptValue}>
+                  {recipientNameResolved ? `${recipientNameResolved} (${recipientEmail})` : recipientEmail || 'Hệ thống đối tác'}
+                </span>
               </div>
+              {description && (
+                <div className={styles.receiptRow}>
+                  <span className={styles.receiptLabel}>Lời nhắn</span>
+                  <span className={styles.receiptValue}>{description}</span>
+                </div>
+              )}
               <div className={styles.receiptRow}>
                 <span className={styles.receiptLabel}>Mã tham chiếu</span>
                 <span className={styles.receiptValue} style={{ fontFamily: 'monospace', fontSize: 11 }}>
@@ -469,6 +685,8 @@ export function QrPaymentPage() {
                 setQrData('');
                 setQrDataRaw('');
                 setPayAmount('');
+                setDescription('');
+                setRecipientNameResolved('');
               }}
               style={{ width: '100%' }}
             >

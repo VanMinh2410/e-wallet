@@ -20,6 +20,11 @@ export class NotificationGateway implements OnGatewayConnection {
   handleConnection(client: Socket) {
     const userId = client.handshake.auth?.userId as string | undefined;
     if (userId) client.join(`user:${userId}`);
+
+    const role = client.handshake.auth?.role as string | undefined;
+    if (role === 'admin') {
+      client.join('admin');
+    }
   }
 
   emitBalanceUpdated(userId: string, balance: number) {
@@ -28,6 +33,7 @@ export class NotificationGateway implements OnGatewayConnection {
 
   emitTransactionCompleted(userId: string, data: Record<string, unknown>) {
     this.server?.to(`user:${userId}`).emit('transaction_completed', data);
+    this.server?.to('admin').emit('transaction_completed', data);
   }
 
   emitNotification(userId: string, notification: Record<string, unknown>) {

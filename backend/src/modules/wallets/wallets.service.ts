@@ -84,6 +84,19 @@ export class WalletsService {
       );
     }
 
+    const senderUser = await this.userModel.findById(userId);
+    if (!senderUser) {
+      throw new BusinessException('Người dùng không tồn tại', ErrorCodes.NOT_FOUND, HttpStatus.NOT_FOUND);
+    }
+    const limit = senderUser.transferLimit ?? 50_000_000;
+    if (dto.amount > limit) {
+      throw new BusinessException(
+        `Giao dịch vượt quá hạn mức chuyển tiền (Hạn mức hiện tại: ${limit.toLocaleString('vi-VN')}đ)`,
+        ErrorCodes.VALIDATION_ERROR,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
     await this.authService.assertTransactionOtp(userId, dto.amount, 500000, dto.otpCode);
 
     const fromWallet = await this.walletModel.findOne({
@@ -96,12 +109,6 @@ export class WalletsService {
     if (fromWallet._id.toString() !== walletId) {
       console.error(`Wallet mismatch: requested ${walletId} but user wallet is ${fromWallet._id.toString()}`);
       // Fallback: we will still proceed because a user only has one wallet.
-    }
-
-    // Get sender info
-    const senderUser = await this.userModel.findById(userId);
-    if (!senderUser) {
-      throw new BusinessException('Người dùng không tồn tại', ErrorCodes.NOT_FOUND, HttpStatus.NOT_FOUND);
     }
 
     const recipientUser = await this.userModel.findOne({

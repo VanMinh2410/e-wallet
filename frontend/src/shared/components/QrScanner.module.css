@@ -14,25 +14,38 @@
 
 .actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
+  gap: 12px;
+  width: 100%;
 }
 
-.uploadBtn {
+.actions > button,
+.actions > .uploadBtn {
+  flex: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   padding: 10px 16px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-primary);
+  border-radius: 12px !important;
+  border: 1px solid #CBD5E1;
+  background: #FFFFFF;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #475569;
   cursor: pointer;
+  height: 44px;
+  box-sizing: border-box;
+  transition: all 150ms ease;
 }
 
-.uploadBtn:active {
-  background: rgba(165, 0, 100, 0.08);
+.actions > button:hover,
+.actions > .uploadBtn:hover {
+  background: #F8FAFC;
+  color: #0F172A;
+  border-color: #94A3B8;
+}
+
+.actions > button:active,
+.actions > .uploadBtn:active {
+  transform: scale(0.98);
 }

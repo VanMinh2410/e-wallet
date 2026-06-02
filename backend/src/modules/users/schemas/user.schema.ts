@@ -28,6 +28,9 @@ export class User {
 
   @Prop({ enum: ['none', 'pending', 'approved', 'rejected'], default: 'none' })
   kycStatus: string;
+
+  @Prop({ default: 50_000_000 })
+  transferLimit: number;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

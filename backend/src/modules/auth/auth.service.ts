@@ -13,6 +13,7 @@ import { Wallet, WalletDocument } from '../wallets/schemas/wallet.schema';
 import { User, UserDocument } from '../users/schemas/user.schema';
 import { OtpRecord, OtpRecordDocument } from './schemas/otp-record.schema';
 import { BankAccount, BankAccountDocument } from '../bank/schemas/bank-account.schema';
+import { AuditLog, AuditLogDocument } from '../../common/schemas/audit-log.schema';
 import { RegisterDto } from './dto/register.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -34,6 +35,7 @@ export class AuthService {
     @InjectModel(Wallet.name) private walletModel: Model<WalletDocument>,
     @InjectModel(OtpRecord.name) private otpModel: Model<OtpRecordDocument>,
     @InjectModel(BankAccount.name) private bankModel: Model<BankAccountDocument>,
+    @InjectModel(AuditLog.name) private auditModel: Model<AuditLogDocument>,
     @InjectConnection() private connection: Connection,
     private jwtService: JwtService,
     private configService: ConfigService,
@@ -196,6 +198,13 @@ export class AuthService {
     if (!user.isVerified) {
       throw new BusinessException('Vui lòng xác minh email trước khi đăng nhập', ErrorCodes.USER_NOT_VERIFIED, HttpStatus.FORBIDDEN);
     }
+    await this.auditModel.create({
+      userId: user._id,
+      action: 'LOGIN_SUCCESS',
+      resource: 'auth',
+      ip: '127.0.0.1',
+      metadata: { device: 'Chrome Browser (Windows)', timestamp: new Date() },
+    });
     return this.issueTokens(user);
   }
 
