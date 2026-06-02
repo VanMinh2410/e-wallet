@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import api, { unwrap } from '../../shared/services/api';
 import { useToast } from '../../shared/context/ToastContext';
 import { formatDate } from '../../shared/utils/format';
-import { useAppSelector } from '../../app/hooks';
+import { useAppSelector, useAppDispatch } from '../../app/hooks';
 import { useSocket } from '../../shared/hooks/useSocket';
+import { logout } from '../auth/authSlice';
 import styles from './AdminPage.module.css';
 
 type AdminTab =
@@ -143,6 +144,8 @@ const RenderSvgIcon = ({ path, className, style }: { path: string; className?: s
 
 export function AdminPage() {
   const authUser = useAppSelector((s) => s.auth.user);
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
 
   if (authUser && authUser.role !== 'admin') {
     return <Navigate to="/dashboard" replace />;
@@ -160,6 +163,16 @@ export function AdminPage() {
 
   const qc = useQueryClient();
   const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      await api.post('/auth/logout');
+    } finally {
+      dispatch(logout());
+      navigate('/login');
+      toast('Đăng xuất thành công', 'info');
+    }
+  };
 
   // Socket setup for real-time transaction tracking
   useSocket(
@@ -479,6 +492,18 @@ export function AdminPage() {
             <div className={styles.userName}>{authUser?.fullName || 'Hệ Thống Admin'}</div>
             <div className={styles.userRole}>Root Administrator</div>
           </div>
+          <button
+            type="button"
+            className={styles.logoutBtn}
+            onClick={handleLogout}
+            title="Đăng xuất"
+            aria-label="Đăng xuất"
+          >
+            <RenderSvgIcon
+              path="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-5-5 M21 12H9"
+              className={styles.logoutIcon}
+            />
+          </button>
         </footer>
       </aside>
 
@@ -674,7 +699,9 @@ export function AdminPage() {
                     <tbody>
                       {txs?.items.slice(0, 8).map((tx) => (
                         <tr key={tx._id}>
-                          <td className={styles.colId}>{tx.reference}</td>
+                          <td className={styles.colId} title={tx.reference} style={{ cursor: 'help' }}>
+                            {tx.reference.length > 15 ? `${tx.reference.slice(0, 12)}...` : tx.reference}
+                          </td>
                           <td>{renderParties(tx)}</td>
                           <td>
                             <span className={styles.typeBadge}>
@@ -1012,7 +1039,9 @@ export function AdminPage() {
                       })
                       .map((tx) => (
                         <tr key={tx._id}>
-                          <td className={styles.colId}>{tx.reference}</td>
+                          <td className={styles.colId} title={tx.reference} style={{ cursor: 'help' }}>
+                            {tx.reference.length > 15 ? `${tx.reference.slice(0, 12)}...` : tx.reference}
+                          </td>
                           <td>{renderParties(tx)}</td>
                           <td>
                             <span className={styles.typeBadge}>

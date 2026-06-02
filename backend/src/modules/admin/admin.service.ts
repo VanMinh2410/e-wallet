@@ -110,7 +110,11 @@ export class AdminService {
   async getAllTransactions(page = 1, limit = 20, type?: string, status?: string) {
     const skip = (page - 1) * limit;
     const filter: Record<string, unknown> = {};
-    if (type) filter.type = type;
+    if (type) {
+      filter.type = type;
+    } else {
+      filter.type = { $ne: TransactionType.RECEIVE };
+    }
     if (status) filter.status = status;
     const [items, total] = await Promise.all([
       this.transactionModel.find(filter)
