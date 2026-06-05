@@ -340,6 +340,20 @@ export function DashboardPage() {
 
   const currentMonthNum = new Date().getMonth() + 1;
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) {
+      return { text: 'Chào ngày mới', icon: '☀️' };
+    } else if (hour >= 12 && hour < 14) {
+      return { text: 'Bữa trưa ngon miệng', icon: '🍽️' };
+    } else if (hour >= 14 && hour < 18) {
+      return { text: 'Chào buổi chiều', icon: '🌤️' };
+    } else {
+      return { text: 'Chào buổi tối', icon: '🌙' };
+    }
+  };
+  const greeting = getGreeting();
+
   return (
     <div className={styles.dashboardContainer}>
       
@@ -349,7 +363,9 @@ export function DashboardPage() {
         <header className={styles.brandHeader}>
           <div className={styles.topHeaderRow}>
             <div className={styles.userGreeting}>
-              <span className={styles.greetingText}>Chào buổi sáng 👋</span>
+              <span className={styles.greetingText}>
+                {greeting.icon} {greeting.text}
+              </span>
               <h2 className={styles.userName}>{user?.fullName || 'Nguyễn Văn An'}</h2>
             </div>
             <button
