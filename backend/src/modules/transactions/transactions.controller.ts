@@ -85,6 +85,35 @@ export class TransactionsController {
     return this.transactionsService.verifyVnpayPayment(body);
   }
 
+  @Post('vnpay-mock/sign')
+  signVnpayMock(
+    @Body()
+    body: {
+      vnp_Amount: string;
+      vnp_TxnRef: string;
+      vnp_OrderInfo: string;
+      vnp_ReturnUrl: string;
+      status: 'success' | 'fail';
+    },
+  ) {
+    return this.transactionsService.signVnpayMockCallback(body);
+  }
+
+  @Post('vnpay-mock/send-otp')
+  sendVnpayMockOtp(
+    @Body('vnp_TxnRef') txnRef: string,
+  ) {
+    return this.transactionsService.sendVnpayMockOtp(txnRef);
+  }
+
+  @Post('vnpay-mock/verify-otp')
+  verifyVnpayMockOtp(
+    @Body('vnp_TxnRef') txnRef: string,
+    @Body('otpCode') otpCode: string,
+  ) {
+    return this.transactionsService.verifyVnpayMockOtp(txnRef, otpCode);
+  }
+
   @Get('vnpay/ipn')
   async ipn(@Query() query: Record<string, string>) {
     try {

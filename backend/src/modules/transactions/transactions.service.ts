@@ -204,7 +204,9 @@ export class TransactionsService implements OnModuleInit, OnModuleDestroy {
 
     let paymentUrl: string | undefined;
     if (dto.paymentMethod === 'vnpay') {
-      paymentUrl = this.generateVnpayUrl(reference, dto.amount);
+      paymentUrl = this.generateVnpayUrl(reference, dto.amount, 'real');
+    } else if (dto.paymentMethod === 'vnpay_local') {
+      paymentUrl = this.generateVnpayUrl(reference, dto.amount, 'local');
     }
 
     return {
@@ -213,7 +215,7 @@ export class TransactionsService implements OnModuleInit, OnModuleDestroy {
       amount: dto.amount,
       paymentCode: reference,
       paymentUrl,
-      message: dto.paymentMethod === 'vnpay'
+      message: dto.paymentMethod === 'vnpay' || dto.paymentMethod === 'vnpay_local'
         ? 'Vui lòng thanh toán qua cổng VNPay.'
         : 'Vui lòng chuyển khoản với mã tham chiếu trên. Số dư sẽ cập nhật sau khi xác nhận.',
     };
@@ -304,7 +306,7 @@ export class TransactionsService implements OnModuleInit, OnModuleDestroy {
       );
     }
 
-    await this.authService.assertTransactionOtp(userId, dto.amount, 500000, dto.otpCode);
+    await this.authService.assertTransactionOtp(userId, dto.amount, 0, dto.otpCode);
 
     const wallet = await this.walletModel.findOne({ userId: new Types.ObjectId(userId), isActive: true });
     if (!wallet) {
@@ -761,11 +763,12 @@ export class TransactionsService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private generateVnpayUrl(reference: string, amount: number): string {
+  private generateVnpayUrl(reference: string, amount: number, mode?: 'local' | 'real'): string {
     const tmnCode = this.configService.get<string>('VNP_TMN_CODE') || 'GKSWJ3QC';
     const secret = this.configService.get<string>('VNP_HASH_SECRET') || 'EJ55B4RE14FBBVBL6C52RIWBVOYE13V6';
     const vnpUrl = this.configService.get<string>('VNP_URL') || 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html';
     const returnUrl = this.configService.get<string>('VNP_RETURN_URL') || 'http://localhost:5173/topup/vnpay-callback';
+    const sandboxMode = mode || this.configService.get<string>('VNP_SANDBOX_MODE') || 'production';
 
     const date = new Date();
     // Format date to local GMT+7 yyyyMMddHHmmss
@@ -792,7 +795,7 @@ export class TransactionsService implements OnModuleInit, OnModuleDestroy {
       hashAlgorithm: HashAlgorithm.SHA512,
     });
 
-    return vnpay.buildPaymentUrl({
+    let url = vnpay.buildPaymentUrl({
       vnp_Amount: amount, // vnpay library takes amount in VND
       vnp_IpAddr: '127.0.0.1',
       vnp_TxnRef: reference,
@@ -801,6 +804,15 @@ export class TransactionsService implements OnModuleInit, OnModuleDestroy {
       vnp_ReturnUrl: returnUrl,
       vnp_CreateDate: Number(createDate),
     });
+
+    if (sandboxMode === 'local') {
+      const realBaseUrl = host.includes('?') ? host.split('?')[0] : host;
+      // Redirect to frontend local sandbox checkout page
+      const localBaseUrl = 'http://localhost:5173/sandbox/vnpay-mock';
+      url = url.replace(realBaseUrl, localBaseUrl);
+    }
+
+    return url;
   }
 
   async verifyVnpayPayment(queryParams: Record<string, string>) {
@@ -908,5 +920,135 @@ export class TransactionsService implements OnModuleInit, OnModuleDestroy {
     } finally {
       await this.redisService.del(lockKey);
     }
+  }
+
+  async signVnpayMockCallback(dto: {
+    vnp_Amount: string;
+    vnp_TxnRef: string;
+    vnp_OrderInfo: string;
+    vnp_ReturnUrl: string;
+    status: 'success' | 'fail';
+  }) {
+    const sandboxMode = this.configService.get<string>('VNP_SANDBOX_MODE') || 'production';
+    if (sandboxMode !== 'local') {
+      throw new BusinessException(
+        'Tính năng giả lập VNPay chỉ khả dụng trong chế độ local sandbox.',
+        ErrorCodes.FORBIDDEN,
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
+    const tmnCode = this.configService.get<string>('VNP_TMN_CODE') || 'GKSWJ3QC';
+    const secret = this.configService.get<string>('VNP_HASH_SECRET') || 'EJ55B4RE14FBBVBL6C52RIWBVOYE13V6';
+
+    const date = new Date();
+    const tzOffset = 7 * 60; // GMT+7
+    const localTime = new Date(date.getTime() + tzOffset * 60 * 1000);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const payDate =
+      localTime.getUTCFullYear() +
+      pad(localTime.getUTCMonth() + 1) +
+      pad(localTime.getUTCDate()) +
+      pad(localTime.getUTCHours()) +
+      pad(localTime.getUTCMinutes()) +
+      pad(localTime.getUTCSeconds());
+
+    const isSuccess = dto.status === 'success';
+    const responseCode = isSuccess ? '00' : '24';
+    const transactionStatus = isSuccess ? '00' : '02';
+
+    const queryParams: Record<string, string> = {
+      vnp_Amount: dto.vnp_Amount,
+      vnp_BankCode: 'NCB',
+      vnp_BankTranNo: `VNP${Date.now()}`,
+      vnp_CardType: 'ATM',
+      vnp_OrderInfo: dto.vnp_OrderInfo,
+      vnp_PayDate: payDate,
+      vnp_ResponseCode: responseCode,
+      vnp_TmnCode: tmnCode,
+      vnp_TransactionNo: String(Math.floor(10000000 + Math.random() * 90000000)),
+      vnp_TransactionStatus: transactionStatus,
+      vnp_TxnRef: dto.vnp_TxnRef,
+    };
+
+    // Sort and sign using HMAC SHA512
+    const sortedKeys = Object.keys(queryParams).sort();
+    const signData = sortedKeys
+      .map((key) => `${encodeURIComponent(key)}=${encodeURIComponent(queryParams[key])}`)
+      .join('&');
+
+    const hmac = createHmac('sha512', secret);
+    const secureHash = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
+
+    const callbackUrl = new URL(dto.vnp_ReturnUrl);
+    Object.entries(queryParams).forEach(([key, val]) => {
+      callbackUrl.searchParams.set(key, val);
+    });
+    callbackUrl.searchParams.set('vnp_SecureHash', secureHash);
+
+    return { callbackUrl: callbackUrl.toString() };
+  }
+
+  async sendVnpayMockOtp(txnRef: string) {
+    const tx = await this.transactionModel.findOne({ reference: txnRef, type: TransactionType.DEPOSIT });
+    if (!tx) {
+      throw new BusinessException('Giao dịch không tồn tại', ErrorCodes.TRANSACTION_NOT_FOUND, HttpStatus.NOT_FOUND);
+    }
+
+    const user = await this.userModel.findById(tx.userId);
+    if (!user) {
+      throw new BusinessException('Người dùng không tồn tại', ErrorCodes.NOT_FOUND, HttpStatus.NOT_FOUND);
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    await this.redisService.set(`mock_otp:${txnRef}`, code, 300);
+
+    let emailSent = false;
+    try {
+      const mailRes = await this.mailerService.sendOtpEmail({
+        to: user.email,
+        code,
+        purpose: 'transaction',
+      });
+      if (mailRes && mailRes.sent) {
+        emailSent = true;
+      }
+    } catch (err) {
+      console.error('Failed to send VNPAY mock OTP email:', err);
+    }
+
+    // Mask email for response display
+    const rawEmail = user.email.trim();
+    const parts = rawEmail.split('@');
+    let maskedEmail = rawEmail;
+    if (parts.length === 2) {
+      const name = parts[0];
+      const domain = parts[1];
+      maskedEmail = name.length > 3 
+        ? name.slice(0, 3) + '***@' + domain
+        : name.slice(0, 1) + '***@' + domain;
+    }
+
+    console.log(`[VNPAY MOCK OTP] Code for ${rawEmail}: ${code} (Email Sent: ${emailSent})`);
+
+    return {
+      success: true,
+      email: maskedEmail,
+      emailSent,
+    };
+  }
+
+  async verifyVnpayMockOtp(txnRef: string, otpCode: string) {
+    // Sandbox convenience: allow '123456' as generic fallback
+    if (otpCode === '123456') {
+      return { success: true };
+    }
+
+    const storedCode = await this.redisService.get(`mock_otp:${txnRef}`);
+    if (!storedCode || storedCode !== otpCode) {
+      throw new BusinessException('Mã OTP không hợp lệ hoặc đã hết hạn. Vui lòng thử lại.', ErrorCodes.INVALID_OTP, HttpStatus.BAD_REQUEST);
+    }
+
+    return { success: true };
   }
 }

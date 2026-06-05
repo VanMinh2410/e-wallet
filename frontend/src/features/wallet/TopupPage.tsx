@@ -30,7 +30,7 @@ export function TopupPage() {
 
   const [step, setStep] = useState(0);
   const [amount, setAmount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'vietcombank' | 'vnpay'>('vietcombank');
+  const [paymentMethod, setPaymentMethod] = useState<'vietcombank' | 'vnpay' | 'vnpay_local'>('vietcombank');
   const [deposit, setDeposit] = useState<{ paymentCode: string; reference: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
@@ -68,7 +68,7 @@ export function TopupPage() {
     try {
       const res = await api.post('/transactions/deposit', { amount: num, paymentMethod });
       const data = unwrap<{ paymentCode: string; reference: string; paymentUrl?: string }>(res);
-      if (paymentMethod === 'vnpay' && data.paymentUrl) {
+      if ((paymentMethod === 'vnpay' || paymentMethod === 'vnpay_local') && data.paymentUrl) {
         window.location.href = data.paymentUrl;
         return;
       }
@@ -186,10 +186,22 @@ export function TopupPage() {
                   onClick={() => setPaymentMethod('vnpay')}
                   style={{ marginBottom: 0 }}
                 >
-                  <div className={styles.bankAccountIcon} style={{ background: 'linear-gradient(135deg, #E02020 0%, #F55B5B 100%)' }}>💳</div>
+                  <div className={styles.bankAccountIcon} style={{ background: 'linear-gradient(135deg, #005baa 0%, #007ee5 100%)' }}>🌐</div>
                   <div className={styles.bankAccountInfo}>
-                    <div className={styles.bankAccountName}>Cổng thanh toán VNPay</div>
-                    <div className={styles.bankAccountNum}>Thẻ ATM nội địa, QR code, Ví điện tử</div>
+                    <div className={styles.bankAccountName}>VNPay Sandbox Thật</div>
+                    <div className={styles.bankAccountNum}>Thử nghiệm qua trang cổng thanh toán Sandbox của VNPay</div>
+                  </div>
+                </div>
+
+                <div
+                  className={`${styles.bankAccountCard} ${paymentMethod === 'vnpay_local' ? styles.bankAccountCardActive : ''}`}
+                  onClick={() => setPaymentMethod('vnpay_local')}
+                  style={{ marginBottom: 0 }}
+                >
+                  <div className={styles.bankAccountIcon} style={{ background: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)' }}>💻</div>
+                  <div className={styles.bankAccountInfo}>
+                    <div className={styles.bankAccountName}>VNPay Sandbox Giả lập (Local)</div>
+                    <div className={styles.bankAccountNum}>Giao diện giả lập cục bộ 1-Click bảo mật và nhanh chóng</div>
                   </div>
                 </div>
               </div>

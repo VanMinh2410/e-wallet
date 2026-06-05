@@ -15,7 +15,7 @@ import { useAppSelector } from '../../app/hooks';
 import styles from './FlowPages.module.css';
 
 const QUICK_AMOUNTS = [50_000, 100_000, 200_000, 500_000, 1_000_000, 2_000_000];
-const OTP_THRESHOLD = 500_000; // OTP khi chuyển từ 500K
+const OTP_THRESHOLD = 0; // OTP khi chuyển tiền (luôn yêu cầu)
 
 type TransferMode = 'wallet' | 'bank';
 

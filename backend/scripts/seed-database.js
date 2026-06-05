@@ -79,7 +79,7 @@ const SEED_USERS = [
   {
     fullName: 'Admin HKi',
     email: 'admin@hki-wallet.dev',
-    phone: '0901234567',
+    phone: '0912345678',
     password: 'Admin@123456',
     balance: 10_000_000,
     role: 'admin',
@@ -87,7 +87,7 @@ const SEED_USERS = [
   {
     fullName: 'User A',
     email: 'usera@hki-wallet.dev',
-    phone: '0912345678',
+    phone: '0964400032',
     password: 'User@123456',
     balance: 500_000,
     role: 'user',

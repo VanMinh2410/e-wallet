@@ -97,7 +97,7 @@ export class WalletsService {
       );
     }
 
-    await this.authService.assertTransactionOtp(userId, dto.amount, 500000, dto.otpCode);
+    await this.authService.assertTransactionOtp(userId, dto.amount, 0, dto.otpCode);
 
     const fromWallet = await this.walletModel.findOne({
       userId: new Types.ObjectId(userId),

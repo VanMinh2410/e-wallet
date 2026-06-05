@@ -6,6 +6,7 @@ import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { TransferPage } from '../features/wallet/TransferPage';
 import { TopupPage } from '../features/wallet/TopupPage';
 import { VnpayCallbackPage } from '../features/wallet/VnpayCallbackPage';
+import { VnpayMockPage } from '../features/wallet/VnpayMockPage';
 import { WithdrawPage } from '../features/wallet/WithdrawPage';
 import { QrPaymentPage } from '../features/wallet/QrPaymentPage';
 import { HistoryPage } from '../features/transactions/HistoryPage';
@@ -24,6 +25,7 @@ export function AppRoutes() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/topup/vnpay-callback" element={<VnpayCallbackPage />} />
+        <Route path="/sandbox/vnpay-mock" element={<VnpayMockPage />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
