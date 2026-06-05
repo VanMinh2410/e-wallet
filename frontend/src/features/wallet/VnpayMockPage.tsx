@@ -79,7 +79,7 @@ export function VnpayMockPage() {
 
   const [maskedEmail, setMaskedEmail] = useState('');
   const [emailSent, setEmailSent] = useState(false);
-  const [isDebugMode, setIsDebugMode] = useState(false);
+  // const [isDebugMode, setIsDebugMode] = useState(false);
 
   // Live Timer Countdowns (15 minutes)
   const [timeLeft, setTimeLeft] = useState(900);
@@ -167,7 +167,7 @@ export function VnpayMockPage() {
       
       setMaskedEmail(data?.email || '');
       setEmailSent(!!data?.emailSent);
-      setIsDebugMode(true);
+      // setIsDebugMode(true);
 
       setCurrentStep('otp_verify');
       setOtpCode('');
