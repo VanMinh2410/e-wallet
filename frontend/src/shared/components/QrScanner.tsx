@@ -73,7 +73,18 @@ export function QrScanner({ onScan, onError }: QrScannerProps) {
 
   return (
     <div className={styles.wrap}>
-      <div id={regionId} className={styles.reader} />
+      <div className={styles.scanArea}>
+        <div id={regionId} className={styles.reader} />
+        <div className={styles.scanOverlay}>
+          <div className={styles.scanFrame}>
+            <span className={`${styles.scanCorner} ${styles.scanCornerTopLeft}`} />
+            <span className={`${styles.scanCorner} ${styles.scanCornerTopRight}`} />
+            <span className={`${styles.scanCorner} ${styles.scanCornerBottomLeft}`} />
+            <span className={`${styles.scanCorner} ${styles.scanCornerBottomRight}`} />
+            <div className={styles.scanBeam} />
+          </div>
+        </div>
+      </div>
       <div className={styles.actions}>
         {!scanning ? (
           <Button type="button" variant="secondary" onClick={startCamera} disabled={busy}>

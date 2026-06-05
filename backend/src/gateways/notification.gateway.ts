@@ -10,7 +10,10 @@ const allowedOrigins = [
 ].filter(Boolean) as string[];
 
 @WebSocketGateway({
-  cors: { origin: allowedOrigins, credentials: true },
+  cors: {
+    origin: true,
+    credentials: true,
+  },
   namespace: '/notifications',
 })
 export class NotificationGateway implements OnGatewayConnection {

@@ -84,7 +84,7 @@ export function QrPaymentPage() {
           amount: amt ? Number(amt) : undefined
         })
       }));
-      setGeneratedQr(`http://localhost:5173/qr-payment?data=${localData}`);
+      setGeneratedQr(`${window.location.origin}/qr-payment?data=${localData}`);
       setRecipientName(authUser?.fullName || 'Nguyễn Văn An');
     }
   };
@@ -537,25 +537,13 @@ export function QrPaymentPage() {
         {tab === 'pay' && !paySuccess && (
           <div className={styles.desktopGridPay}>
             <div className={styles.formColumn}>
-              {/* Glowing Corner Brackets Simulator Frame */}
-              <div className={styles.scanArea}>
-                <QrScanner
-                  onScan={(text) => {
-                    handleQrCodeChange(text);
-                    toast('Đã nhận diện mã QR thành công', 'success');
-                  }}
-                  onError={(msg) => console.log('Scanner error:', msg)}
-                />
-                <div className={styles.scanOverlay}>
-                  <div className={styles.scanFrame}>
-                    <span className={`${styles.scanCorner} ${styles.scanCornerTopLeft}`} />
-                    <span className={`${styles.scanCorner} ${styles.scanCornerTopRight}`} />
-                    <span className={`${styles.scanCorner} ${styles.scanCornerBottomLeft}`} />
-                    <span className={`${styles.scanCorner} ${styles.scanCornerBottomRight}`} />
-                    <div className={styles.scanBeam} />
-                  </div>
-                </div>
-              </div>
+              <QrScanner
+                onScan={(text) => {
+                  handleQrCodeChange(text);
+                  toast('Đã nhận diện mã QR thành công', 'success');
+                }}
+                onError={(msg) => console.log('Scanner error:', msg)}
+              />
             </div>
 
             <div className={styles.sidebarColumn}>

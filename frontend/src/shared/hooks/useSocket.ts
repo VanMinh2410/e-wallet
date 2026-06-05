@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { getAccessToken } from '../services/api';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || window.location.origin;
 
 export function useSocket(userId: string | undefined, handlers: {
   onBalanceUpdated?: (balance: number) => void;
