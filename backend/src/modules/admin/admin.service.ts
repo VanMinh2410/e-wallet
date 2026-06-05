@@ -72,7 +72,7 @@ export class AdminService {
     return { message: 'Đã mở khóa tài khoản' };
   }
 
-  async pendingApprovals() {
+  async pendingApprovals(): Promise<any[]> {
     const txs = await this.transactionModel
       .find({ type: TransactionType.WITHDRAW, status: TransactionStatus.PENDING })
       .populate({ path: 'userId', select: 'fullName email phone' })

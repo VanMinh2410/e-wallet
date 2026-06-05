@@ -34,7 +34,7 @@ export class AdminController {
   }
 
   @Get('pending-approval')
-  pending() {
+  pending(): Promise<any[]> {
     return this.adminService.pendingApprovals();
   }
 
