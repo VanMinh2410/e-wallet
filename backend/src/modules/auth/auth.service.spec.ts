@@ -33,6 +33,7 @@ describe('AuthService', () => {
         { provide: getModelToken('Wallet'), useValue: mockWalletModel },
         { provide: getModelToken('OtpRecord'), useValue: mockOtpModel },
         { provide: getModelToken('BankAccount'), useValue: {} },
+        { provide: getModelToken('AuditLog'), useValue: {} },
         { provide: getConnectionToken(), useValue: mockConnection },
         { provide: JwtService, useValue: { sign: jest.fn().mockReturnValue('token'), verify: jest.fn() } },
         { provide: ConfigService, useValue: { get: jest.fn().mockReturnValue('secret') } },
