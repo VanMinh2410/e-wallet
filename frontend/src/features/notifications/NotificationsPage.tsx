@@ -27,12 +27,16 @@ export function NotificationsPage() {
 
   const markAll = useMutation({
     mutationFn: () => api.put('/notifications/mark-all-read'),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['notifications'] });
+      qc.invalidateQueries({ queryKey: ['notifications-unread-count'] });
+    },
   });
 
   const markOne = async (id: string) => {
     await api.put(`/notifications/${id}/read`);
     qc.invalidateQueries({ queryKey: ['notifications'] });
+    qc.invalidateQueries({ queryKey: ['notifications-unread-count'] });
   };
 
   return (

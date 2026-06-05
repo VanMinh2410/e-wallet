@@ -684,3 +684,34 @@
   font-size: 10.5px;
   font-weight: 600;
 }
+
+.txStatusBadgeMobile {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 9px;
+  font-weight: 700;
+  margin-top: 4px;
+  line-height: 1.2;
+}
+
+.mobileSuccess {
+  background: #D1FAE5;
+  color: #065F46;
+}
+
+.mobilePending {
+  background: #FEF3C7;
+  color: #92400E;
+}
+
+.mobileFailed {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
+.mobileCancelled {
+  background: #F1F5F9;
+  color: #64748B;
+}

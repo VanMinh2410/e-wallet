@@ -842,8 +842,17 @@ export class TransactionsService implements OnModuleInit, OnModuleDestroy {
     if (!acquired) {
       await new Promise((resolve) => setTimeout(resolve, 1500));
       const doubleCheckTx = await this.transactionModel.findOne({ reference });
-      if (doubleCheckTx && doubleCheckTx.status === TransactionStatus.SUCCESS) {
-        return { isVerified: true, message: 'Giao dịch đã được xử lý trước đó', reference };
+      if (
+        doubleCheckTx &&
+        (doubleCheckTx.status === TransactionStatus.SUCCESS ||
+          doubleCheckTx.status === TransactionStatus.CANCELLED ||
+          doubleCheckTx.status === TransactionStatus.FAILED)
+      ) {
+        return {
+          isVerified: doubleCheckTx.status === TransactionStatus.SUCCESS,
+          message: 'Giao dịch đã được xử lý trước đó',
+          reference,
+        };
       }
       throw new BusinessException(
         'Giao dịch đang được xử lý bởi yêu cầu khác, vui lòng tải lại trang.',
@@ -858,8 +867,16 @@ export class TransactionsService implements OnModuleInit, OnModuleDestroy {
         throw new BusinessException('Giao dịch không tồn tại', ErrorCodes.TRANSACTION_NOT_FOUND, HttpStatus.NOT_FOUND);
       }
 
-      if (tx.status === TransactionStatus.SUCCESS) {
-        return { isVerified: true, message: 'Giao dịch đã được xử lý trước đó', reference };
+      if (
+        tx.status === TransactionStatus.SUCCESS ||
+        tx.status === TransactionStatus.CANCELLED ||
+        tx.status === TransactionStatus.FAILED
+      ) {
+        return {
+          isVerified: tx.status === TransactionStatus.SUCCESS,
+          message: 'Giao dịch đã được xử lý trước đó',
+          reference,
+        };
       }
 
       if (responseCode === '00') {
@@ -916,6 +933,34 @@ export class TransactionsService implements OnModuleInit, OnModuleDestroy {
       } else {
         tx.status = TransactionStatus.CANCELLED;
         await tx.save();
+
+        const txUserId = tx.userId.toString();
+        await this.notificationsService.create(
+          txUserId,
+          'Nạp tiền VNPay thất bại',
+          `Giao dịch nạp tiền ${tx.amount.toLocaleString('vi-VN')}đ qua VNPay đã thất bại hoặc bị hủy`,
+          'topup',
+        );
+
+        await this.auditModel.create({
+          userId: tx.userId,
+          action: 'TOPUP_VNPAY_FAILED',
+          resource: 'transaction',
+          metadata: { reference, responseCode },
+        });
+
+        // Send failure email
+        const userForEmail = await this.userModel.findById(tx.userId);
+        if (userForEmail) {
+          void this.mailerService.sendTransactionEmail({
+            to: userForEmail.email,
+            type: 'topup_failed',
+            amount: tx.amount,
+            reference,
+            date: new Date(),
+          });
+        }
+
         return { isVerified: false, message: 'Giao dịch VNPay thất bại hoặc bị hủy', reference };
       }
     } finally {

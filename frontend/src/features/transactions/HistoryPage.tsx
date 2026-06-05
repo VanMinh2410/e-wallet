@@ -61,12 +61,14 @@ export function HistoryPage() {
     }
   };
 
-  const getStatusDotClass = (status: string) => {
+  const getStatusClassMobile = (status: string) => {
     switch (status) {
-      case 'SUCCESS':    return styles.txStatusDotSuccess;
+      case 'SUCCESS':    return styles.mobileSuccess;
       case 'PENDING':
-      case 'PROCESSING': return styles.txStatusDotPending;
-      default:           return styles.txStatusDotFailed;
+      case 'PROCESSING': return styles.mobilePending;
+      case 'FAILED':     return styles.mobileFailed;
+      case 'CANCELLED':  return styles.mobileCancelled;
+      default:           return styles.mobilePending;
     }
   };
 
@@ -297,7 +299,9 @@ export function HistoryPage() {
                       <span className={`${styles.txAmount} ${tx.amount > 0 ? styles.positive : styles.negative}`}>
                         {tx.amount > 0 ? '+' : ''}{tx.amount.toLocaleString('vi-VN')}đ
                       </span>
-                      <div className={`${styles.txStatusDot} ${getStatusDotClass(tx.status)}`} />
+                      <span className={`${styles.txStatusBadgeMobile} ${getStatusClassMobile(tx.status)}`}>
+                        {TX_STATUS_LABELS[tx.status] || tx.status}
+                      </span>
                     </div>
                   </div>
                 ))}

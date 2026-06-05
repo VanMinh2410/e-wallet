@@ -54,6 +54,13 @@ export function DashboardPage() {
     queryFn: async () => unwrap<LinkedBankAccount[]>(await api.get('/bank-accounts')),
   });
 
+  const { data: unreadData } = useQuery({
+    queryKey: ['notifications-unread-count'],
+    queryFn: async () => unwrap<{ count: number }>(await api.get('/notifications/unread-count')),
+    refetchInterval: 15000,
+  });
+  const unreadCount = unreadData?.count ?? 0;
+
   const { data: transactionsData } = useQuery({
     queryKey: ['transactions-all'],
     queryFn: async () => {
@@ -80,6 +87,7 @@ export function DashboardPage() {
       toast(note.message ?? note.title ?? 'Có thông báo mới', 'info');
       qc.invalidateQueries({ queryKey: ['transactions-all'] });
       qc.invalidateQueries({ queryKey: ['wallet'] });
+      qc.invalidateQueries({ queryKey: ['notifications-unread-count'] });
     },
   });
 
@@ -354,7 +362,7 @@ export function DashboardPage() {
                 <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
                 <path d="M13.73 21a2 2 0 01-3.46 0" />
               </svg>
-              <span className={styles.bellBadge} />
+              {unreadCount > 0 && <span className={styles.bellBadge}>{unreadCount}</span>}
             </button>
           </div>
 

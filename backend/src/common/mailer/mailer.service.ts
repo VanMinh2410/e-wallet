@@ -204,7 +204,7 @@ export class MailerService {
 
   async sendTransactionEmail(params: {
     to: string;
-    type: 'transfer_out' | 'transfer_in' | 'topup' | 'withdraw' | 'qr_payment';
+    type: 'transfer_out' | 'transfer_in' | 'topup' | 'topup_failed' | 'withdraw' | 'qr_payment';
     amount: number;
     reference: string;
     recipientName?: string;
@@ -228,6 +228,7 @@ export class MailerService {
       transfer_out: { label: 'Chuyển tiền đi', subject: '💸 Xác nhận chuyển tiền - VBANK', amountPrefix: '-', color: '#EF4444', icon: '→' },
       transfer_in: { label: 'Nhận tiền', subject: '💰 Bạn vừa nhận được tiền - VBANK', amountPrefix: '+', color: '#10B981', icon: '←' },
       topup: { label: 'Nạp tiền vào ví', subject: '✅ Nạp tiền thành công - VBANK', amountPrefix: '+', color: '#10B981', icon: '↑' },
+      topup_failed: { label: 'Nạp tiền thất bại', subject: '❌ Nạp tiền thất bại - VBANK', amountPrefix: '', color: '#EF4444', icon: '↓' },
       withdraw: { label: 'Rút tiền', subject: '🏧 Rút tiền thành công - VBANK', amountPrefix: '-', color: '#EF4444', icon: '↓' },
       qr_payment: { label: 'Thanh toán QR', subject: '📱 Thanh toán QR thành công - VBANK', amountPrefix: '-', color: '#8B5CF6', icon: '▣' },
     };
@@ -267,7 +268,11 @@ export class MailerService {
         <tr><td style="background:#fff;padding:28px 32px 20px;text-align:center;border-bottom:1px solid #F1F5F9;">
           <div style="font-size:12px;font-weight:700;letter-spacing:1.5px;color:#94A3B8;text-transform:uppercase;margin-bottom:10px;">${info.label}</div>
           <div style="font-size:40px;font-weight:900;color:${info.color};letter-spacing:-2px;font-feature-settings:'tnum';">${info.amountPrefix}${amountFormatted} <span style="font-size:20px;font-weight:700;">đ</span></div>
-          <div style="display:inline-block;margin-top:12px;padding:6px 14px;background:#ECFDF5;border-radius:99px;font-size:12px;font-weight:700;color:#059669;">✓ Giao dịch thành công</div>
+          ${
+            params.type === 'topup_failed'
+              ? `<div style="display:inline-block;margin-top:12px;padding:6px 14px;background:#FEF2F2;border-radius:99px;font-size:12px;font-weight:700;color:#DC2626;">✗ Giao dịch thất bại</div>`
+              : `<div style="display:inline-block;margin-top:12px;padding:6px 14px;background:#ECFDF5;border-radius:99px;font-size:12px;font-weight:700;color:#059669;">✓ Giao dịch thành công</div>`
+          }
         </td></tr>
         <!-- Details -->
         <tr><td style="background:#fff;padding:8px 32px 20px;">

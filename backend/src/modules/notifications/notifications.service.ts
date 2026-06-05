@@ -59,4 +59,12 @@ export class NotificationsService {
     );
     return { message: 'Đã đánh dấu tất cả đã đọc' };
   }
+
+  async getUnreadCount(userId: string) {
+    const count = await this.notificationModel.countDocuments({
+      userId: new Types.ObjectId(userId),
+      isRead: false,
+    });
+    return { count };
+  }
 }
