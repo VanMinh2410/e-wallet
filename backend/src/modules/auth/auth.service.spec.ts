@@ -6,6 +6,7 @@ import { Connection } from 'mongoose';
 import { getConnectionToken } from '@nestjs/mongoose';
 import { AuthService } from './auth.service';
 import { RedisService } from '../../common/redis/redis.service';
+import { MailerService } from '../../common/mailer/mailer.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -38,6 +39,7 @@ describe('AuthService', () => {
         { provide: JwtService, useValue: { sign: jest.fn().mockReturnValue('token'), verify: jest.fn() } },
         { provide: ConfigService, useValue: { get: jest.fn().mockReturnValue('secret') } },
         { provide: RedisService, useValue: { set: jest.fn(), get: jest.fn(), del: jest.fn() } },
+        { provide: MailerService, useValue: { sendTransactionEmail: jest.fn(), sendMail: jest.fn(), getTransporter: jest.fn() } },
       ],
     }).compile();
 
