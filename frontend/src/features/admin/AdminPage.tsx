@@ -152,6 +152,7 @@ export function AdminPage() {
   }
 
   const [tab, setTab] = useState<AdminTab>('overview');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [txType, setTxType] = useState('');
   const [txStatus, setTxStatus] = useState('');
   const [txPage, setTxPage] = useState(1);
@@ -448,10 +449,18 @@ export function AdminPage() {
 
   return (
     <div className={styles.adminContainer}>
+      {/* Dark overlay when sidebar is open on mobile */}
+      {sidebarOpen && (
+        <div
+          className={styles.sidebarOverlay}
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* ==========================================
            1. SIDEBAR (LEFT)
            ========================================== */}
-      <aside className={styles.sidebar}>
+      <aside className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ''}`}>
         <div className={styles.sidebarHeader}>
           <div className={styles.logoIcon}>
             <RenderSvgIcon path="M5 21V10m4 11V10m6 11V10m4 11V10 M2 10l10-7 10 7 M3 21h18" />
@@ -474,6 +483,7 @@ export function AdminPage() {
                   onClick={() => {
                     setTab(item.key);
                     setSearchTerm('');
+                    setSidebarOpen(false); // Close sidebar on mobile select
                   }}
                 >
                   <span className={styles.navItemContent}>
@@ -513,6 +523,20 @@ export function AdminPage() {
       <div className={styles.mainWrapper}>
         <header className={styles.topbar}>
           <div className={styles.topbarLeft}>
+            {/* Hamburger menu button for mobile */}
+            <button
+              type="button"
+              className={styles.menuToggleBtn}
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Mở menu"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+
             <h2 className={styles.pageTitle}>{activeTabLabel}</h2>
             {tab !== 'overview' && tab !== 'monitoring' && (
               <div className={styles.searchContainer}>
@@ -592,88 +616,90 @@ export function AdminPage() {
           {tab === 'overview' && (
             <div className={styles.dashboardLayout}>
               {/* Daily revenue comparison chart (7 days) */}
-              <div className={styles.card} style={{ marginBottom: 16 }}>
-                <div className={styles.panelHeader}>
-                  <h3 className={styles.panelTitle}>Doanh số Nạp & Rút tiền (7 ngày qua)</h3>
-                  <div style={{ display: 'flex', gap: 12, fontSize: 11, fontWeight: 600 }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ width: 10, height: 10, background: 'linear-gradient(180deg, #34d399 0%, #10b981 100%)', display: 'inline-block', borderRadius: 2 }}></span>
-                      Nạp tiền (Deposit)
-                    </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ width: 10, height: 10, background: 'linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%)', display: 'inline-block', borderRadius: 2 }}></span>
-                      Rút tiền (Withdraw)
-                    </span>
+              <div className={styles.card} style={{ marginBottom: 16, overflowX: 'auto' }}>
+                <div style={{ minWidth: 500 }}>
+                  <div className={styles.panelHeader}>
+                    <h3 className={styles.panelTitle}>Doanh số Nạp & Rút tiền (7 ngày qua)</h3>
+                    <div style={{ display: 'flex', gap: 12, fontSize: 11, fontWeight: 600 }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ width: 10, height: 10, background: 'linear-gradient(180deg, #34d399 0%, #10b981 100%)', display: 'inline-block', borderRadius: 2 }}></span>
+                        Nạp tiền (Deposit)
+                      </span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ width: 10, height: 10, background: 'linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%)', display: 'inline-block', borderRadius: 2 }}></span>
+                        Rút tiền (Withdraw)
+                      </span>
+                    </div>
                   </div>
-                </div>
-                {(() => {
-                  const maxVal = Math.max(...(analytics?.dailyRevenue || []).map((d: any) => Math.max(d.deposit, d.withdraw)) || [1000000]);
-                  const yLabels = [maxVal, maxVal * 0.75, maxVal * 0.5, maxVal * 0.25, 0];
-                  return (
-                    <div style={{ display: 'flex', gap: 12, height: 240, paddingTop: 20 }}>
-                      {/* Y Axis Labels */}
-                      <div style={{ width: 75, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: 10, color: '#9ca3af', fontWeight: 600, paddingBottom: 25 }}>
-                        {yLabels.map((val, idx) => (
-                          <span key={idx}>{val >= 1000000 ? `${(val / 1000000).toFixed(1)}M` : val.toLocaleString()}đ</span>
-                        ))}
-                      </div>
-
-                      {/* Chart Area */}
-                      <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', height: '100%' }}>
-                        {/* Grid Lines */}
-                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 200, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', pointerEvents: 'none' }}>
-                          <div style={{ borderBottom: '1px dashed #e5e7eb', width: '100%', height: 0 }}></div>
-                          <div style={{ borderBottom: '1px dashed #e5e7eb', width: '100%', height: 0 }}></div>
-                          <div style={{ borderBottom: '1px dashed #e5e7eb', width: '100%', height: 0 }}></div>
-                          <div style={{ borderBottom: '1px dashed #e5e7eb', width: '100%', height: 0 }}></div>
-                          <div style={{ borderBottom: '1px solid #cbd5e1', width: '100%', height: 0 }}></div>
+                  {(() => {
+                    const maxVal = Math.max(...(analytics?.dailyRevenue || []).map((d: any) => Math.max(d.deposit, d.withdraw)) || [1000000]);
+                    const yLabels = [maxVal, maxVal * 0.75, maxVal * 0.5, maxVal * 0.25, 0];
+                    return (
+                      <div style={{ display: 'flex', gap: 12, height: 240, paddingTop: 20 }}>
+                        {/* Y Axis Labels */}
+                        <div style={{ width: 75, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: 10, color: '#9ca3af', fontWeight: 600, paddingBottom: 25 }}>
+                          {yLabels.map((val, idx) => (
+                            <span key={idx}>{val >= 1000000 ? `${(val / 1000000).toFixed(1)}M` : val.toLocaleString()}đ</span>
+                          ))}
                         </div>
 
-                        {/* Bars container */}
-                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 200, display: 'flex', alignItems: 'flex-end', gap: 16, zIndex: 5 }}>
-                          {analytics?.dailyRevenue?.map((day: any) => {
-                            const depHeight = `${Math.max(4, Math.min(100, (day.deposit / (maxVal || 1)) * 100))}%`;
-                            const witHeight = `${Math.max(4, Math.min(100, (day.withdraw / (maxVal || 1)) * 100))}%`;
-                            return (
-                              <div key={day.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'flex-end', alignItems: 'center' }}>
-                                <div style={{ display: 'flex', gap: 6, width: '100%', height: '100%', alignItems: 'flex-end', justifyContent: 'center' }}>
-                                  {/* Deposit Bar (Green) */}
-                                  <div className={styles.chartBarWrapper} style={{ height: depHeight, width: 16, background: 'linear-gradient(180deg, #34d399 0%, #10b981 100%)', borderRadius: '4px 4px 0 0', position: 'relative', boxShadow: '0 2px 4px rgba(16, 185, 129, 0.15)' }}>
-                                    <div className={styles.chartTooltip}>
-                                      <strong>Nạp tiền</strong><br />
-                                      {day.deposit.toLocaleString('vi-VN')}đ
+                        {/* Chart Area */}
+                        <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', height: '100%' }}>
+                          {/* Grid Lines */}
+                          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 200, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', pointerEvents: 'none' }}>
+                            <div style={{ borderBottom: '1px dashed #e5e7eb', width: '100%', height: 0 }}></div>
+                            <div style={{ borderBottom: '1px dashed #e5e7eb', width: '100%', height: 0 }}></div>
+                            <div style={{ borderBottom: '1px dashed #e5e7eb', width: '100%', height: 0 }}></div>
+                            <div style={{ borderBottom: '1px dashed #e5e7eb', width: '100%', height: 0 }}></div>
+                            <div style={{ borderBottom: '1px solid #cbd5e1', width: '100%', height: 0 }}></div>
+                          </div>
+
+                          {/* Bars container */}
+                          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 200, display: 'flex', alignItems: 'flex-end', gap: 16, zIndex: 5 }}>
+                            {analytics?.dailyRevenue?.map((day: any) => {
+                              const depHeight = `${Math.max(4, Math.min(100, (day.deposit / (maxVal || 1)) * 100))}%`;
+                              const witHeight = `${Math.max(4, Math.min(100, (day.withdraw / (maxVal || 1)) * 100))}%`;
+                              return (
+                                <div key={day.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                  <div style={{ display: 'flex', gap: 6, width: '100%', height: '100%', alignItems: 'flex-end', justifyContent: 'center' }}>
+                                    {/* Deposit Bar (Green) */}
+                                    <div className={styles.chartBarWrapper} style={{ height: depHeight, width: 16, background: 'linear-gradient(180deg, #34d399 0%, #10b981 100%)', borderRadius: '4px 4px 0 0', position: 'relative', boxShadow: '0 2px 4px rgba(16, 185, 129, 0.15)' }}>
+                                      <div className={styles.chartTooltip}>
+                                        <strong>Nạp tiền</strong><br />
+                                        {day.deposit.toLocaleString('vi-VN')}đ
+                                      </div>
                                     </div>
-                                  </div>
-                                  {/* Withdraw Bar (Orange/Red) */}
-                                  <div className={styles.chartBarWrapper} style={{ height: witHeight, width: 16, background: 'linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%)', borderRadius: '4px 4px 0 0', position: 'relative', boxShadow: '0 2px 4px rgba(245, 158, 11, 0.15)' }}>
-                                    <div className={styles.chartTooltip}>
-                                      <strong>Rút tiền</strong><br />
-                                      {day.withdraw.toLocaleString('vi-VN')}đ
+                                    {/* Withdraw Bar (Orange/Red) */}
+                                    <div className={styles.chartBarWrapper} style={{ height: witHeight, width: 16, background: 'linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%)', borderRadius: '4px 4px 0 0', position: 'relative', boxShadow: '0 2px 4px rgba(245, 158, 11, 0.15)' }}>
+                                      <div className={styles.chartTooltip}>
+                                        <strong>Rút tiền</strong><br />
+                                        {day.withdraw.toLocaleString('vi-VN')}đ
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
+                              );
+                            })}
+                            {(!analytics?.dailyRevenue || analytics.dailyRevenue.length === 0) && (
+                              <div style={{ position: 'absolute', width: '100%', textAlign: 'center', color: '#9ca3af', fontSize: 12, bottom: '50%' }}>
+                                Không có dữ liệu doanh số
                               </div>
-                            );
-                          })}
-                          {(!analytics?.dailyRevenue || analytics.dailyRevenue.length === 0) && (
-                            <div style={{ position: 'absolute', width: '100%', textAlign: 'center', color: '#9ca3af', fontSize: 12, bottom: '50%' }}>
-                              Không có dữ liệu doanh số
-                            </div>
-                          )}
-                        </div>
+                            )}
+                          </div>
 
-                        {/* X Axis Labels */}
-                        <div style={{ display: 'flex', gap: 16, marginTop: 205, height: 20 }}>
-                          {analytics?.dailyRevenue?.map((day: any) => (
-                            <div key={day.date} style={{ flex: 1, textAlign: 'center', fontSize: 11, color: '#4b5563', fontWeight: 700 }}>
-                              {day.date.split('-').reverse().slice(0, 2).join('/')}
-                            </div>
-                          ))}
+                          {/* X Axis Labels */}
+                          <div style={{ display: 'flex', gap: 16, marginTop: 205, height: 20 }}>
+                            {analytics?.dailyRevenue?.map((day: any) => (
+                              <div key={day.date} style={{ flex: 1, textAlign: 'center', fontSize: 11, color: '#4b5563', fontWeight: 700 }}>
+                                {day.date.split('-').reverse().slice(0, 2).join('/')}
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })()}
+                    );
+                  })()}
+                </div>
               </div>
 
               <div className={styles.card} style={{ margin: 0 }}>

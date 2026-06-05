@@ -629,7 +629,7 @@ export class TransactionsService implements OnModuleInit, OnModuleDestroy {
     }
 
     // Assert transaction OTP if necessary
-    await this.authService.assertTransactionOtp(userId, payAmount, 500000, otpCode);
+    await this.authService.assertTransactionOtp(userId, payAmount, 0, otpCode);
 
     const reference = `QR-${uuidv4()}`;
     const recipientReference = `RXQ-${uuidv4()}`;
@@ -808,7 +808,8 @@ export class TransactionsService implements OnModuleInit, OnModuleDestroy {
     if (sandboxMode === 'local') {
       const realBaseUrl = host.includes('?') ? host.split('?')[0] : host;
       // Redirect to frontend local sandbox checkout page
-      const localBaseUrl = 'http://localhost:5173/sandbox/vnpay-mock';
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const localBaseUrl = `${frontendUrl}/sandbox/vnpay-mock`;
       url = url.replace(realBaseUrl, localBaseUrl);
     }
 

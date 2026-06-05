@@ -14,6 +14,11 @@
   overflow: hidden;
 }
 
+.adminContainer,
+.adminContainer * {
+  box-sizing: border-box;
+}
+
 /* ==========================================================
    SIDEBAR STYLE
    ========================================================== */
@@ -387,6 +392,8 @@
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* Dashboard Layout split */
@@ -874,3 +881,130 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
+
+/* ==========================================================
+   RESPONSIVE MEDIA QUERIES FOR TABLET & MOBILE
+   ========================================================== */
+
+/* Toggle Menu button (hidden on desktop) */
+.menuToggleBtn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background-color: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  margin-right: 8px;
+}
+
+.menuToggleBtn:hover {
+  background-color: #e5e7eb;
+}
+
+@media (max-width: 1024px) {
+  .menuToggleBtn {
+    display: flex;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 5px 0 25px rgba(0, 0, 0, 0.15);
+  }
+
+  .sidebarOpen {
+    transform: translateX(0);
+  }
+
+  .sidebarOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(4px);
+    z-index: 9;
+    animation: fadeIn 0.2s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .topbar {
+    height: auto;
+    padding: 12px 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .topbarLeft {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .searchContainer {
+    width: 100%;
+    margin-top: 4px;
+  }
+
+  .topbarRight {
+    display: none; /* Hide status pill on small screens to save space */
+  }
+
+  .contentBody {
+    padding: 16px 12px;
+  }
+
+  .metricsGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .metricsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .pageTitle {
+    font-size: 15px;
+  }
+
+  .table td, .table th {
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+
+  .detailGrid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .logoText h1 {
+    font-size: 14px;
+  }
+
+  .contentBody {
+    padding: 12px 8px;
+  }
+
+  .card {
+    padding: 16px 12px;
+  }
+}
+

@@ -227,7 +227,7 @@ export function QrPaymentPage() {
       return;
     }
 
-    if (finalAmount >= 500_000 && !otpCode) {
+    if (!otpCode) {
       setOtpOpen(true);
       return;
     }
