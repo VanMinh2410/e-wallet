@@ -8,6 +8,27 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 
 async function bootstrap() {
+  console.log('=== ENVIRONMENT CHECK ===');
+  console.log('NODE_ENV:', process.env.NODE_ENV);
+  console.log('PORT:', process.env.PORT);
+  
+  const rawMongoUri = process.env.MONGODB_URI;
+  if (rawMongoUri) {
+    const masked = rawMongoUri.replace(/:[^@/]+@/, ':******@');
+    console.log('MONGODB_URI is configured:', masked);
+  } else {
+    console.warn('WARNING: MONGODB_URI is not set! Falling back to localhost.');
+  }
+
+  const rawRedisUrl = process.env.REDIS_URL;
+  if (rawRedisUrl) {
+    const masked = rawRedisUrl.replace(/:[^@/]+@/, ':******@');
+    console.log('REDIS_URL is configured:', masked);
+  } else {
+    console.warn('WARNING: REDIS_URL is not set! Falling back to localhost.');
+  }
+  console.log('=========================');
+
   const app = await NestFactory.create(AppModule);
 
   app.use(helmet());
