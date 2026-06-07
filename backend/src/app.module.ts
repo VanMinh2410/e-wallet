@@ -22,7 +22,7 @@ import { HealthController } from './health.controller';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        uri: configService.get<string>('MONGODB_URI') || 'mongodb://localhost:27017/hki-wallet?retryWrites=false',
+        uri: configService.get<string>('MONGODB_URI')
       }),
     }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
