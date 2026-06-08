@@ -1,16 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
-import { type Transporter } from 'nodemailer';
+
 
 @Injectable()
 export class MailerService {
   private readonly logger = new Logger(MailerService.name);
-  private transporter: Transporter | null = null;
+  private transporter: nodemailer.Transporter | null = null;
 
   constructor(private readonly config: ConfigService) {}
 
-  private async getTransporter(): Promise<Transporter | null> {
+  private async getTransporter(): Promise<nodemailer.Transporter | null> {
     if (this.transporter) return this.transporter;
 
     let host = this.config.get<string>('EMAIL_HOST');
