@@ -1,12 +1,1 @@
-import 'express';
-
-declare module 'express' {
-  interface Request {
-    cookies?: any;
-  }
-
-  interface Response {
-    cookie(name: string, value: any, options?: any): this;
-    clearCookie(name: string): this;
-  }
-}
+// Custom express types commented out to prevent conflict with @types/express and @types/cookie-parser
