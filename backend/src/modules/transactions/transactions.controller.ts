@@ -135,7 +135,8 @@ export class TransactionsController {
           return { RspCode: '01', Message: 'Order not found' };
         }
       }
-      return { RspCode: '99', Message: error.message || 'Unknown error' };
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      return { RspCode: '99', Message: errorMessage };
     }
   }
 }
