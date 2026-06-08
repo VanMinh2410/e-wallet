@@ -21,5 +21,7 @@
 
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
+
+    "ignoreDeprecations": "5.0"
   }
 }
