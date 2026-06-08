@@ -291,7 +291,7 @@ npm run seed
 **Tài khoản Test sẵn có:**
 
 | Email tài khoản | Mật khẩu | Phân quyền (Role) | Chức năng thử nghiệm |
-| :--- | :--- | :--- | :--- |
+| :---- | :--- | :--- | :--- |
 | `admin@hki-wallet.dev` | `Admin@123456` | **Admin** | Đăng nhập để duyệt các giao dịch rút tiền và quản lý người dùng |
 | `usera@hki-wallet.dev` | `User@123456` | **User** | Người dùng A (Ví có sẵn 10.000.000đ để chuyển khoản, nạp/rút) |
 | `userb@hki-wallet.dev` | `User@123456` | **User** | Người dùng B (Ví trống để nhận chuyển khoản từ người dùng A) |
